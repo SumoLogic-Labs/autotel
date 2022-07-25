@@ -50,7 +50,12 @@ func PropagateContext(projectPath string,
 				switch x := n.(type) {
 				case *ast.CallExpr:
 					if pkg.TypesInfo.Uses[ident] != nil {
-						fun := FuncDescriptor{pkg.TypesInfo.Uses[ident].Id(),
+						pkgPath := ""
+						if pkg.TypesInfo.Uses[ident].Pkg() != nil {
+							pkgPath = pkg.TypesInfo.Uses[ident].Pkg().Path()
+						}
+						funId := pkgPath + "." + pkg.TypesInfo.Uses[ident].Name()
+						fun := FuncDescriptor{funId,
 							pkg.TypesInfo.Uses[ident].Type().String()}
 						found := funcDecls[fun]
 						// inject context parameter only
@@ -96,7 +101,12 @@ func PropagateContext(projectPath string,
 					// }
 					// TODO this is not optimap o(n)
 					exists := false
-					fun := FuncDescriptor{pkg.TypesInfo.Defs[x.Name].Id(),
+					pkgPath := ""
+					if pkg.TypesInfo.Defs[x.Name].Pkg() != nil {
+						pkgPath = pkg.TypesInfo.Defs[x.Name].Pkg().Path()
+					}
+					funId := pkgPath + "." + pkg.TypesInfo.Defs[x.Name].Name()
+					fun := FuncDescriptor{funId,
 						pkg.TypesInfo.Defs[x.Name].Type().String()}
 
 					for k, v := range callgraph {
@@ -117,7 +127,7 @@ func PropagateContext(projectPath string,
 						break
 					}
 					visited := map[FuncDescriptor]bool{}
-					fmt.Println("\t\t\tFuncDecl:", pkg.TypesInfo.Defs[x.Name].Id(), pkg.TypesInfo.Defs[x.Name].Type().String())
+					fmt.Println("\t\t\tFuncDecl:", funId, pkg.TypesInfo.Defs[x.Name].Type().String())
 					if isPath(callgraph, fun, rootFunctions[0], visited) {
 						x.Type.Params.List = append(x.Type.Params.List, ctxField)
 					}
@@ -125,7 +135,12 @@ func PropagateContext(projectPath string,
 					ident, ok := x.Fun.(*ast.Ident)
 
 					if ok {
-						fmt.Println("\t\t\tCallExpr:", pkg.TypesInfo.Uses[ident].Id(), pkg.TypesInfo.Uses[ident].Type().String())
+						pkgPath := ""
+						if pkg.TypesInfo.Uses[ident].Pkg() != nil {
+							pkgPath = pkg.TypesInfo.Uses[ident].Pkg().Path()
+						}
+						funId := pkgPath + "." + pkg.TypesInfo.Uses[ident].Name()
+						fmt.Println("\t\t\tCallExpr:", funId, pkg.TypesInfo.Uses[ident].Type().String())
 
 						emitCallExpr(ident, n, ctxArg)
 					}
@@ -147,7 +162,12 @@ func PropagateContext(projectPath string,
 					for _, method := range x.Methods.List {
 						if funcType, ok := method.Type.(*ast.FuncType); ok {
 							visited := map[FuncDescriptor]bool{}
-							fun := FuncDescriptor{pkg.TypesInfo.Defs[method.Names[0]].Id(),
+							pkgPath := ""
+							if pkg.TypesInfo.Defs[method.Names[0]].Pkg() != nil {
+								pkgPath = pkg.TypesInfo.Defs[method.Names[0]].Pkg().Path()
+							}
+							funId := pkgPath + "." + pkg.TypesInfo.Defs[method.Names[0]].Name()
+							fun := FuncDescriptor{funId,
 								pkg.TypesInfo.Defs[method.Names[0]].Type().String()}
 							fmt.Println("\t\t\tInterfaceType", fun.Id, fun.DeclType)
 							if isPath(callgraph, fun, rootFunctions[0], visited) {

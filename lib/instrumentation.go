@@ -86,7 +86,12 @@ func Instrument(projectPath string,
 			ast.Inspect(node, func(n ast.Node) bool {
 				switch x := n.(type) {
 				case *ast.FuncDecl:
-					fun := FuncDescriptor{pkg.TypesInfo.Defs[x.Name].Id(), pkg.TypesInfo.Defs[x.Name].Type().String()}
+					pkgPath := ""
+					if pkg.TypesInfo.Defs[x.Name].Pkg() != nil {
+						pkgPath = pkg.TypesInfo.Defs[x.Name].Pkg().Path()
+					}
+					fundId := pkgPath + "." + pkg.TypesInfo.Defs[x.Name].Name()
+					fun := FuncDescriptor{fundId, pkg.TypesInfo.Defs[x.Name].Type().String()}
 					// that's kind a trick
 					// context propagation pass adds additional context parameter
 					// this additional parameter has to be removed to match
@@ -107,8 +112,7 @@ func Instrument(projectPath string,
 
 					for _, root := range rootFunctions {
 						visited := map[FuncDescriptor]bool{}
-
-						fmt.Println("\t\t\tFuncDecl:", pkg.TypesInfo.Defs[x.Name].Id(), pkg.TypesInfo.Defs[x.Name].Type().String())
+						fmt.Println("\t\t\tFuncDecl:", fundId, pkg.TypesInfo.Defs[x.Name].Type().String())
 						if isPath(callgraph, fun, root, visited) && fun.TypeHash() != root.TypeHash() {
 							s1 := &ast.ExprStmt{
 								X: &ast.CallExpr{

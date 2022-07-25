@@ -53,8 +53,9 @@ func FindRootFunctions(projectPath string, packagePattern string) []FuncDescript
 						}
 					}
 				case *ast.FuncDecl:
-					currentFun = FuncDescriptor{pkg.TypesInfo.Defs[x.Name].Id(), pkg.TypesInfo.Defs[x.Name].Type().String()}
-					fmt.Println("\t\t\tFuncDecl:", pkg.TypesInfo.Defs[x.Name].Id(), pkg.TypesInfo.Defs[x.Name].Type().String())
+					funId := pkg.TypesInfo.Defs[x.Name].Pkg().Path() + "." + pkg.TypesInfo.Defs[x.Name].Name()
+					currentFun = FuncDescriptor{funId, pkg.TypesInfo.Defs[x.Name].Type().String()}
+					fmt.Println("\t\t\tFuncDecl:", funId, pkg.TypesInfo.Defs[x.Name].Type().String())
 				}
 				return true
 			})
@@ -82,8 +83,13 @@ func BuildCallGraph(projectPath string, packagePattern string, funcDecls map[Fun
 				case *ast.CallExpr:
 					id, ok := x.Fun.(*ast.Ident)
 					if ok {
-						fmt.Println("\t\t\tFuncCall:", pkg.TypesInfo.Uses[id].Id(), pkg.TypesInfo.Uses[id].Type().String())
-						fun := FuncDescriptor{pkg.TypesInfo.Uses[id].Id(), pkg.TypesInfo.Uses[id].Type().String()}
+						pkgPath := ""
+						if pkg.TypesInfo.Uses[id].Pkg() != nil {
+							pkgPath = pkg.TypesInfo.Uses[id].Pkg().Path()
+						}
+						funId := pkgPath + "." + pkg.TypesInfo.Uses[id].Name()
+						fmt.Println("\t\t\tFuncCall:", funId, pkg.TypesInfo.Uses[id].Type().String())
+						fun := FuncDescriptor{funId, pkg.TypesInfo.Uses[id].Type().String()}
 						if !Contains(backwardCallGraph[fun], currentFun) {
 							if funcDecls[fun] == true {
 								backwardCallGraph[fun] = append(backwardCallGraph[fun], currentFun)
@@ -93,8 +99,13 @@ func BuildCallGraph(projectPath string, packagePattern string, funcDecls map[Fun
 					sel, ok := x.Fun.(*ast.SelectorExpr)
 					if ok {
 						if pkg.TypesInfo.Uses[sel.Sel] != nil {
-							fmt.Println("\t\t\tFuncCall via selector:", pkg.TypesInfo.Uses[sel.Sel].Id(), pkg.TypesInfo.Uses[sel.Sel].Type().String())
-							fun := FuncDescriptor{pkg.TypesInfo.Uses[sel.Sel].Id(), pkg.TypesInfo.Uses[sel.Sel].Type().String()}
+							pkgPath := ""
+							if pkg.TypesInfo.Uses[sel.Sel].Pkg() != nil {
+								pkgPath = pkg.TypesInfo.Uses[sel.Sel].Pkg().Path()
+							}
+							funId := pkgPath + "." + pkg.TypesInfo.Uses[sel.Sel].Name()
+							fmt.Println("\t\t\tFuncCall via selector:", funId, pkg.TypesInfo.Uses[sel.Sel].Type().String())
+							fun := FuncDescriptor{funId, pkg.TypesInfo.Uses[sel.Sel].Type().String()}
 							if !Contains(backwardCallGraph[fun], currentFun) {
 								if funcDecls[fun] == true {
 									backwardCallGraph[fun] = append(backwardCallGraph[fun], currentFun)
@@ -103,8 +114,13 @@ func BuildCallGraph(projectPath string, packagePattern string, funcDecls map[Fun
 						}
 					}
 				case *ast.FuncDecl:
-					currentFun = FuncDescriptor{pkg.TypesInfo.Defs[x.Name].Id(), pkg.TypesInfo.Defs[x.Name].Type().String()}
-					fmt.Println("\t\t\tFuncDecl:", pkg.TypesInfo.Defs[x.Name].Id(), pkg.TypesInfo.Defs[x.Name].Type().String())
+					pkgPath := ""
+					if pkg.TypesInfo.Defs[x.Name].Pkg() != nil {
+						pkgPath = pkg.TypesInfo.Defs[x.Name].Pkg().Path()
+					}
+					funId := pkgPath + "." + pkg.TypesInfo.Defs[x.Name].Name()
+					currentFun = FuncDescriptor{funId, pkg.TypesInfo.Defs[x.Name].Type().String()}
+					fmt.Println("\t\t\tFuncDecl:", funId, pkg.TypesInfo.Defs[x.Name].Type().String())
 				}
 				return true
 			})
@@ -129,8 +145,13 @@ func FindFuncDecls(projectPath string, packagePattern string) map[FuncDescriptor
 			ast.Inspect(node, func(n ast.Node) bool {
 				switch x := n.(type) {
 				case *ast.FuncDecl:
-					fmt.Println("\t\t\tFuncDecl:", pkg.TypesInfo.Defs[x.Name].Id(), pkg.TypesInfo.Defs[x.Name].Type().String())
-					funcDecls[FuncDescriptor{pkg.TypesInfo.Defs[x.Name].Id(), pkg.TypesInfo.Defs[x.Name].Type().String()}] = true
+					pkgPath := ""
+					if pkg.TypesInfo.Defs[x.Name].Pkg() != nil {
+						pkgPath = pkg.TypesInfo.Defs[x.Name].Pkg().Path()
+					}
+					funId := pkgPath + "." + pkg.TypesInfo.Defs[x.Name].Name()
+					fmt.Println("\t\t\tFuncDecl:", funId, pkg.TypesInfo.Defs[x.Name].Type().String())
+					funcDecls[FuncDescriptor{funId, pkg.TypesInfo.Defs[x.Name].Type().String()}] = true
 				}
 				return true
 			})
