@@ -28,8 +28,9 @@ func PropagateContext(projectPath string,
 	}
 	for _, pkg := range pkgs {
 		fmt.Println("\t", pkg)
-
-		for _, node := range pkg.Syntax {
+		var node *ast.File
+		addImports := false
+		for _, node = range pkg.Syntax {
 			var out *os.File
 			fmt.Println("\t\t", fset.File(node.Pos()).Name())
 			if len(passFileSuffix) > 0 {
@@ -44,7 +45,6 @@ func PropagateContext(projectPath string,
 				printer.Fprint(out, fset, node)
 				continue
 			}
-			astutil.AddImport(fset, node, "context")
 
 			emitCallExpr := func(ident *ast.Ident, n ast.Node, ctxArg *ast.Ident) {
 				switch x := n.(type) {
@@ -65,6 +65,7 @@ func PropagateContext(projectPath string,
 						if found {
 							visited := map[FuncDescriptor]bool{}
 							if isPath(callgraph, fun, rootFunctions[0], visited) {
+								addImports = true
 								x.Args = append(x.Args, ctxArg)
 							}
 						}
@@ -129,6 +130,7 @@ func PropagateContext(projectPath string,
 					visited := map[FuncDescriptor]bool{}
 					fmt.Println("\t\t\tFuncDecl:", funId, pkg.TypesInfo.Defs[x.Name].Type().String())
 					if isPath(callgraph, fun, rootFunctions[0], visited) {
+						addImports = true
 						x.Type.Params.List = append(x.Type.Params.List, ctxField)
 					}
 				case *ast.CallExpr:
@@ -146,6 +148,7 @@ func PropagateContext(projectPath string,
 					}
 					_, ok = x.Fun.(*ast.FuncLit)
 					if ok {
+						addImports = true
 						x.Args = append(x.Args, ctxArg)
 					}
 					// TODO selectors are recursive
@@ -157,6 +160,7 @@ func PropagateContext(projectPath string,
 						emitCallExpr(sel.Sel, n, ctxArg)
 					}
 				case *ast.FuncLit:
+					addImports = true
 					x.Type.Params.List = append(x.Type.Params.List, ctxField)
 				case *ast.InterfaceType:
 					for _, method := range x.Methods.List {
@@ -171,6 +175,7 @@ func PropagateContext(projectPath string,
 								pkg.TypesInfo.Defs[method.Names[0]].Type().String()}
 							fmt.Println("\t\t\tInterfaceType", fun.Id, fun.DeclType)
 							if isPath(callgraph, fun, rootFunctions[0], visited) {
+								addImports = true
 								funcType.Params.List = append(funcType.Params.List, ctxField)
 							}
 
@@ -179,6 +184,9 @@ func PropagateContext(projectPath string,
 				}
 				return true
 			})
+			if addImports {
+				astutil.AddImport(fset, node, "context")
+			}
 			printer.Fprint(out, fset, node)
 			if len(passFileSuffix) > 0 {
 				os.Rename(fset.File(node.Pos()).Name(), fset.File(node.Pos()).Name()+".original")

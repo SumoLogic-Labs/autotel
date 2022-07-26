@@ -30,6 +30,7 @@ func Instrument(projectPath string,
 	for _, pkg := range pkgs {
 		fmt.Println("\t", pkg)
 		addImports := false
+		addContext := false
 		var node *ast.File
 		for _, node = range pkg.Syntax {
 			var out *os.File
@@ -104,6 +105,7 @@ func Instrument(projectPath string,
 					_, exists := callgraph[fun]
 					if !exists {
 						if !Contains(rootFunctions, fun) {
+							addContext = true
 							x.Body.List = append([]ast.Stmt{childTracingTodo, childTracingSupress}, x.Body.List...)
 							return false
 						}
@@ -210,11 +212,13 @@ func Instrument(projectPath string,
 							}
 							_ = s1
 							x.Body.List = append([]ast.Stmt{s2, s3, s4}, x.Body.List...)
+							addContext = true
 							addImports = true
 						} else {
 							// check whether this function is root function
 							if !Contains(rootFunctions, fun) {
 								x.Body.List = append([]ast.Stmt{childTracingTodo, childTracingSupress}, x.Body.List...)
+								addContext = true
 								return false
 							}
 							s1 := &ast.ExprStmt{
@@ -393,6 +397,7 @@ func Instrument(projectPath string,
 							_ = s1
 							x.Body.List = append([]ast.Stmt{s2, s3, s4, s5, s6, s8}, x.Body.List...)
 							x.Body.List = append([]ast.Stmt{childTracingTodo, childTracingSupress}, x.Body.List...)
+							addContext = true
 							addImports = true
 
 						}
@@ -496,11 +501,14 @@ func Instrument(projectPath string,
 					_ = s1
 					x.Body.List = append([]ast.Stmt{s2, s3, s4}, x.Body.List...)
 					addImports = true
+					addContext = true
 				}
 
 				return true
 			})
-
+			if addContext {
+				astutil.AddImport(fset, node, "context")
+			}
 			if addImports {
 				astutil.AddNamedImport(fset, node, "otel", "go.opentelemetry.io/otel")
 			}
