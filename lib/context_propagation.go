@@ -185,8 +185,11 @@ func PropagateContext(projectPath string,
 				return true
 			})
 			if addImports {
-				astutil.AddImport(fset, node, "context")
+				if !astutil.UsesImport(node, "context") {
+					astutil.AddImport(fset, node, "context")
+				}
 			}
+
 			printer.Fprint(out, fset, node)
 			if len(passFileSuffix) > 0 {
 				os.Rename(fset.File(node.Pos()).Name(), fset.File(node.Pos()).Name()+".original")

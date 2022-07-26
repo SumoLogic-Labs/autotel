@@ -508,10 +508,14 @@ func Instrument(projectPath string,
 				return true
 			})
 			if addContext {
-				astutil.AddImport(fset, node, "context")
+				if !astutil.UsesImport(node, "context") {
+					astutil.AddImport(fset, node, "context")
+				}
 			}
 			if addImports {
-				astutil.AddNamedImport(fset, node, "otel", "go.opentelemetry.io/otel")
+				if !astutil.UsesImport(node, "go.opentelemetry.io/otel") {
+					astutil.AddNamedImport(fset, node, "otel", "go.opentelemetry.io/otel")
+				}
 			}
 			printer.Fprint(out, fset, node)
 			if len(passFileSuffix) > 0 {
