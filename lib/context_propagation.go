@@ -29,8 +29,8 @@ func PropagateContext(projectPath string,
 	for _, pkg := range pkgs {
 		fmt.Println("\t", pkg)
 		var node *ast.File
-		addImports := false
 		for _, node = range pkg.Syntax {
+			addImports := false
 			var out *os.File
 			fmt.Println("\t\t", fset.File(node.Pos()).Name())
 			if len(passFileSuffix) > 0 {
@@ -160,8 +160,8 @@ func PropagateContext(projectPath string,
 						emitCallExpr(sel.Sel, n, ctxArg)
 					}
 				case *ast.FuncLit:
-					addImports = true
-					x.Type.Params.List = append(x.Type.Params.List, ctxField)
+					//addImports = true
+					//x.Type.Params.List = append(x.Type.Params.List, ctxField)
 				case *ast.InterfaceType:
 					for _, method := range x.Methods.List {
 						if funcType, ok := method.Type.(*ast.FuncType); ok {
