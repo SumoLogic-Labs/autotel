@@ -146,11 +146,11 @@ func PropagateContext(projectPath string,
 
 						emitCallExpr(ident, n, ctxArg)
 					}
-					_, ok = x.Fun.(*ast.FuncLit)
-					if ok {
-						addImports = true
-						x.Args = append(x.Args, ctxArg)
-					}
+					// _, ok = x.Fun.(*ast.FuncLit)
+					// if ok {
+					// 	addImports = true
+					// 	x.Args = append(x.Args, ctxArg)
+					// }
 					// TODO selectors are recursive
 					// a.b.c.fun()
 					// check whether the most outer one is package
