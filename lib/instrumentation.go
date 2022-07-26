@@ -29,8 +29,9 @@ func Instrument(projectPath string,
 	}
 	for _, pkg := range pkgs {
 		fmt.Println("\t", pkg)
-
-		for _, node := range pkg.Syntax {
+		addImports := false
+		var node *ast.File
+		for _, node = range pkg.Syntax {
 			var out *os.File
 			fmt.Println("\t\t", fset.File(node.Pos()).Name())
 			if len(passFileSuffix) > 0 {
@@ -44,8 +45,6 @@ func Instrument(projectPath string,
 				printer.Fprint(out, fset, node)
 				continue
 			}
-			astutil.AddImport(fset, node, "context")
-			astutil.AddNamedImport(fset, node, "otel", "go.opentelemetry.io/otel")
 
 			childTracingTodo := &ast.AssignStmt{
 				Lhs: []ast.Expr{
@@ -211,6 +210,7 @@ func Instrument(projectPath string,
 							}
 							_ = s1
 							x.Body.List = append([]ast.Stmt{s2, s3, s4}, x.Body.List...)
+							addImports = true
 						} else {
 							// check whether this function is root function
 							if !Contains(rootFunctions, fun) {
@@ -393,6 +393,7 @@ func Instrument(projectPath string,
 							_ = s1
 							x.Body.List = append([]ast.Stmt{s2, s3, s4, s5, s6, s8}, x.Body.List...)
 							x.Body.List = append([]ast.Stmt{childTracingTodo, childTracingSupress}, x.Body.List...)
+							addImports = true
 
 						}
 					}
@@ -494,9 +495,15 @@ func Instrument(projectPath string,
 					}
 					_ = s1
 					x.Body.List = append([]ast.Stmt{s2, s3, s4}, x.Body.List...)
+					addImports = true
 				}
+
 				return true
 			})
+
+			if addImports {
+				astutil.AddNamedImport(fset, node, "otel", "go.opentelemetry.io/otel")
+			}
 			printer.Fprint(out, fset, node)
 			if len(passFileSuffix) > 0 {
 				os.Rename(fset.File(node.Pos()).Name(), fset.File(node.Pos()).Name()+".tmp")
@@ -504,5 +511,6 @@ func Instrument(projectPath string,
 				os.Rename(fset.File(node.Pos()).Name()+"ir_instr", fset.File(node.Pos()).Name())
 			}
 		}
+
 	}
 }
