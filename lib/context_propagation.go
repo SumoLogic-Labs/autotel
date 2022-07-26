@@ -29,8 +29,8 @@ func PropagateContext(projectPath string,
 	for _, pkg := range pkgs {
 		fmt.Println("\t", pkg)
 		var node *ast.File
-		addImports := false
 		for _, node = range pkg.Syntax {
+			addImports := false
 			var out *os.File
 			fmt.Println("\t\t", fset.File(node.Pos()).Name())
 			if len(passFileSuffix) > 0 {

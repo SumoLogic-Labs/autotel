@@ -29,10 +29,10 @@ func Instrument(projectPath string,
 	}
 	for _, pkg := range pkgs {
 		fmt.Println("\t", pkg)
-		addImports := false
-		addContext := false
 		var node *ast.File
 		for _, node = range pkg.Syntax {
+			addImports := false
+			addContext := false
 			var out *os.File
 			fmt.Println("\t\t", fset.File(node.Pos()).Name())
 			if len(passFileSuffix) > 0 {
