@@ -1,7 +1,12 @@
 package app
 
 import "fmt"
+//import . "github.com/SumoLogic-Labs/autotel/tests/interface/serializer"
 
-func(S Serializer) Serialize() {
+type BasicSerializer struct {
+  
+}
+
+func(b BasicSerializer) Serialize() {
   fmt.Println("Serialize")
 }
