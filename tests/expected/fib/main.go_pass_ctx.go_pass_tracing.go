@@ -32,5 +32,5 @@ func main() {
 	__child_tracing_ctx, span := otel.Tracer("main").Start(ctx, "main")
 	defer span.End()
 	rtlib.AutotelEntryPoint__()
-	fmt.Println(FibonacciHelper(10, __child_tracing_ctx))
+	fmt.Println(FibonacciHelper(__child_tracing_ctx, 10))
 }

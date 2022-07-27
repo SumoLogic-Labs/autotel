@@ -27,7 +27,7 @@ func foo(__tracing_ctx context.Context) {
 	fmt.Println("foo")
 }
 
-func FibonacciHelper(n uint, __tracing_ctx context.Context) (uint64, error) {
+func FibonacciHelper(__tracing_ctx context.Context, n uint) (uint64, error) {
 	__child_tracing_ctx, span := otel.Tracer("FibonacciHelper").Start(__tracing_ctx, "FibonacciHelper")
 	_ = __child_tracing_ctx
 	defer span.End()
@@ -37,11 +37,11 @@ func FibonacciHelper(n uint, __tracing_ctx context.Context) (uint64, error) {
 		defer span.End()
 		foo(__child_tracing_ctx)
 	}(__child_tracing_ctx)
-	return Fibonacci(n, __child_tracing_ctx)
+	return Fibonacci(__child_tracing_ctx, n)
 }
 
 // Fibonacci returns the n-th fibonacci number.
-func Fibonacci(n uint, __tracing_ctx context.Context) (uint64, error) {
+func Fibonacci(__tracing_ctx context.Context, n uint) (uint64, error) {
 	__child_tracing_ctx, span := otel.Tracer("Fibonacci").Start(__tracing_ctx, "Fibonacci")
 	_ = __child_tracing_ctx
 	defer span.End()
