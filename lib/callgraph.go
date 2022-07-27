@@ -75,6 +75,7 @@ func BuildCallGraph(projectPath string, packagePattern string, funcDecls map[Fun
 	currentFun := FuncDescriptor{"nil", ""}
 	backwardCallGraph := make(map[FuncDescriptor][]FuncDescriptor)
 	for _, pkg := range pkgs {
+
 		fmt.Println("\t", pkg)
 		for _, node := range pkg.Syntax {
 			fmt.Println("\t\t", fset.File(node.Pos()).Name())
