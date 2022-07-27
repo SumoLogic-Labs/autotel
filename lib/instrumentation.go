@@ -33,7 +33,6 @@ func Instrument(projectPath string,
 		for _, node = range pkg.Syntax {
 			addImports := false
 			addContext := false
-
 			var out *os.File
 			fmt.Println("\t\t", fset.File(node.Pos()).Name())
 			if len(passFileSuffix) > 0 {
