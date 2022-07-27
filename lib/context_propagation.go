@@ -46,6 +46,11 @@ func PropagateContext(projectPath string,
 				continue
 			}
 
+			// below variable is used
+			// when callexpr is inside var decl
+			// instead of functiondecl
+			currentFun := "nil"
+
 			emitCallExpr := func(ident *ast.Ident, n ast.Node, ctxArg *ast.Ident) {
 				switch x := n.(type) {
 				case *ast.CallExpr:
@@ -66,7 +71,23 @@ func PropagateContext(projectPath string,
 							visited := map[FuncDescriptor]bool{}
 							if isPath(callgraph, fun, rootFunctions[0], visited) {
 								addImports = true
-								x.Args = append(x.Args, ctxArg)
+								if currentFun != "nil" {
+									x.Args = append([]ast.Expr{ctxArg}, x.Args...)
+								} else {
+									contextTodo := &ast.CallExpr{
+										Fun: &ast.SelectorExpr{
+											X: &ast.Ident{
+												Name: "context",
+											},
+											Sel: &ast.Ident{
+												Name: "TODO",
+											},
+										},
+										Lparen:   62,
+										Ellipsis: 0,
+									}
+									x.Args = append([]ast.Expr{contextTodo}, x.Args...)
+								}
 							}
 						}
 					}
@@ -92,6 +113,7 @@ func PropagateContext(projectPath string,
 						},
 					},
 				}
+
 				switch x := n.(type) {
 				case *ast.FuncDecl:
 					// inject context only
@@ -107,6 +129,7 @@ func PropagateContext(projectPath string,
 						pkgPath = pkg.TypesInfo.Defs[x.Name].Pkg().Path()
 					}
 					funId := pkgPath + "." + pkg.TypesInfo.Defs[x.Name].Name()
+					currentFun = funId
 					fun := FuncDescriptor{funId,
 						pkg.TypesInfo.Defs[x.Name].Type().String()}
 
@@ -131,7 +154,7 @@ func PropagateContext(projectPath string,
 					fmt.Println("\t\t\tFuncDecl:", funId, pkg.TypesInfo.Defs[x.Name].Type().String())
 					if isPath(callgraph, fun, rootFunctions[0], visited) {
 						addImports = true
-						x.Type.Params.List = append(x.Type.Params.List, ctxField)
+						x.Type.Params.List = append([]*ast.Field{ctxField}, x.Type.Params.List...)
 					}
 				case *ast.CallExpr:
 					ident, ok := x.Fun.(*ast.Ident)
@@ -149,7 +172,7 @@ func PropagateContext(projectPath string,
 					_, ok = x.Fun.(*ast.FuncLit)
 					if ok {
 						addImports = true
-						x.Args = append(x.Args, ctxArg)
+						x.Args = append([]ast.Expr{ctxArg}, x.Args...)
 					}
 					// TODO selectors are recursive
 					// a.b.c.fun()
@@ -161,7 +184,7 @@ func PropagateContext(projectPath string,
 					}
 				case *ast.FuncLit:
 					addImports = true
-					x.Type.Params.List = append(x.Type.Params.List, ctxField)
+					x.Type.Params.List = append([]*ast.Field{ctxField}, x.Type.Params.List...)
 				case *ast.InterfaceType:
 					for _, method := range x.Methods.List {
 						if funcType, ok := method.Type.(*ast.FuncType); ok {
@@ -176,7 +199,7 @@ func PropagateContext(projectPath string,
 							fmt.Println("\t\t\tInterfaceType", fun.Id, fun.DeclType)
 							if isPath(callgraph, fun, rootFunctions[0], visited) {
 								addImports = true
-								funcType.Params.List = append(funcType.Params.List, ctxField)
+								funcType.Params.List = append([]*ast.Field{ctxField}, funcType.Params.List...)
 							}
 
 						}
@@ -185,8 +208,11 @@ func PropagateContext(projectPath string,
 				return true
 			})
 			if addImports {
-				astutil.AddImport(fset, node, "context")
+				if !astutil.UsesImport(node, "context") {
+					astutil.AddImport(fset, node, "context")
+				}
 			}
+
 			printer.Fprint(out, fset, node)
 			if len(passFileSuffix) > 0 {
 				os.Rename(fset.File(node.Pos()).Name(), fset.File(node.Pos()).Name()+".original")

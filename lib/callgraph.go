@@ -75,6 +75,7 @@ func BuildCallGraph(projectPath string, packagePattern string, funcDecls map[Fun
 	currentFun := FuncDescriptor{"nil", ""}
 	backwardCallGraph := make(map[FuncDescriptor][]FuncDescriptor)
 	for _, pkg := range pkgs {
+
 		fmt.Println("\t", pkg)
 		for _, node := range pkg.Syntax {
 			fmt.Println("\t\t", fset.File(node.Pos()).Name())
@@ -88,7 +89,7 @@ func BuildCallGraph(projectPath string, packagePattern string, funcDecls map[Fun
 							pkgPath = pkg.TypesInfo.Uses[id].Pkg().Path()
 						}
 						funId := pkgPath + "." + pkg.TypesInfo.Uses[id].Name()
-						fmt.Println("\t\t\tFuncCall:", funId, pkg.TypesInfo.Uses[id].Type().String())
+						fmt.Println("\t\t\tFuncCall:", funId, pkg.TypesInfo.Uses[id].Type().String(), " @called : ", fset.File(node.Pos()).Name())
 						fun := FuncDescriptor{funId, pkg.TypesInfo.Uses[id].Type().String()}
 						if !Contains(backwardCallGraph[fun], currentFun) {
 							if funcDecls[fun] == true {
@@ -104,7 +105,7 @@ func BuildCallGraph(projectPath string, packagePattern string, funcDecls map[Fun
 								pkgPath = pkg.TypesInfo.Uses[sel.Sel].Pkg().Path()
 							}
 							funId := pkgPath + "." + pkg.TypesInfo.Uses[sel.Sel].Name()
-							fmt.Println("\t\t\tFuncCall via selector:", funId, pkg.TypesInfo.Uses[sel.Sel].Type().String())
+							fmt.Println("\t\t\tFuncCall via selector:", funId, pkg.TypesInfo.Uses[sel.Sel].Type().String(), " @called : ", fset.File(node.Pos()).Name())
 							fun := FuncDescriptor{funId, pkg.TypesInfo.Uses[sel.Sel].Type().String()}
 							if !Contains(backwardCallGraph[fun], currentFun) {
 								if funcDecls[fun] == true {

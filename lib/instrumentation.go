@@ -33,6 +33,7 @@ func Instrument(projectPath string,
 		for _, node = range pkg.Syntax {
 			addImports := false
 			addContext := false
+
 			var out *os.File
 			fmt.Println("\t\t", fset.File(node.Pos()).Name())
 			if len(passFileSuffix) > 0 {
@@ -96,9 +97,8 @@ func Instrument(projectPath string,
 					// context propagation pass adds additional context parameter
 					// this additional parameter has to be removed to match
 					// what's already in function callgraph
+					fun.DeclType = strings.ReplaceAll(fun.DeclType, "(__tracing_ctx context.Context, ", "(")
 					fun.DeclType = strings.ReplaceAll(fun.DeclType, "(__tracing_ctx context.Context", "(")
-					fun.DeclType = strings.ReplaceAll(fun.DeclType, ", __tracing_ctx context.Context", "")
-
 					// check if it's root function or
 					// one of function in call graph
 					// and emit proper ast nodes
@@ -507,10 +507,14 @@ func Instrument(projectPath string,
 				return true
 			})
 			if addContext {
-				astutil.AddImport(fset, node, "context")
+				if !astutil.UsesImport(node, "context") {
+					astutil.AddImport(fset, node, "context")
+				}
 			}
 			if addImports {
-				astutil.AddNamedImport(fset, node, "otel", "go.opentelemetry.io/otel")
+				if !astutil.UsesImport(node, "go.opentelemetry.io/otel") {
+					astutil.AddNamedImport(fset, node, "otel", "go.opentelemetry.io/otel")
+				}
 			}
 			printer.Fprint(out, fset, node)
 			if len(passFileSuffix) > 0 {
