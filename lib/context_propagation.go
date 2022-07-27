@@ -46,6 +46,11 @@ func PropagateContext(projectPath string,
 				continue
 			}
 
+			// below variable is used
+			// when callexpr is inside var decl
+			// instead of functiondecl
+			currentFun := "nil"
+
 			emitCallExpr := func(ident *ast.Ident, n ast.Node, ctxArg *ast.Ident) {
 				switch x := n.(type) {
 				case *ast.CallExpr:
@@ -66,7 +71,23 @@ func PropagateContext(projectPath string,
 							visited := map[FuncDescriptor]bool{}
 							if isPath(callgraph, fun, rootFunctions[0], visited) {
 								addImports = true
-								x.Args = append(x.Args, ctxArg)
+								if currentFun != "nil" {
+									x.Args = append(x.Args, ctxArg)
+								} else {
+									contextTodo := &ast.CallExpr{
+										Fun: &ast.SelectorExpr{
+											X: &ast.Ident{
+												Name: "context",
+											},
+											Sel: &ast.Ident{
+												Name: "TODO",
+											},
+										},
+										Lparen:   62,
+										Ellipsis: 0,
+									}
+									x.Args = append(x.Args, contextTodo)
+								}
 							}
 						}
 					}
@@ -92,6 +113,7 @@ func PropagateContext(projectPath string,
 						},
 					},
 				}
+
 				switch x := n.(type) {
 				case *ast.FuncDecl:
 					// inject context only
@@ -107,6 +129,7 @@ func PropagateContext(projectPath string,
 						pkgPath = pkg.TypesInfo.Defs[x.Name].Pkg().Path()
 					}
 					funId := pkgPath + "." + pkg.TypesInfo.Defs[x.Name].Name()
+					currentFun = funId
 					fun := FuncDescriptor{funId,
 						pkg.TypesInfo.Defs[x.Name].Type().String()}
 
