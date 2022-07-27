@@ -169,11 +169,11 @@ func PropagateContext(projectPath string,
 
 						emitCallExpr(ident, n, ctxArg)
 					}
-					// _, ok = x.Fun.(*ast.FuncLit)
-					// if ok {
-					// 	addImports = true
-					// 	x.Args = append([]ast.Expr{ctxArg}, x.Args...)
-					// }
+					_, ok = x.Fun.(*ast.FuncLit)
+					if ok {
+						addImports = true
+						x.Args = append([]ast.Expr{ctxArg}, x.Args...)
+					}
 					// TODO selectors are recursive
 					// a.b.c.fun()
 					// check whether the most outer one is package
@@ -183,8 +183,8 @@ func PropagateContext(projectPath string,
 						emitCallExpr(sel.Sel, n, ctxArg)
 					}
 				case *ast.FuncLit:
-					// addImports = true
-					// x.Type.Params.List = append([]*ast.Field{ctxField}, x.Type.Params.List...)
+					addImports = true
+					x.Type.Params.List = append([]*ast.Field{ctxField}, x.Type.Params.List...)
 				case *ast.InterfaceType:
 					for _, method := range x.Methods.List {
 						if funcType, ok := method.Type.(*ast.FuncType); ok {
