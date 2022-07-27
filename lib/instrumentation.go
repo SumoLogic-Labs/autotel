@@ -97,9 +97,8 @@ func Instrument(projectPath string,
 					// context propagation pass adds additional context parameter
 					// this additional parameter has to be removed to match
 					// what's already in function callgraph
+					fun.DeclType = strings.ReplaceAll(fun.DeclType, "(__tracing_ctx context.Context, ", "(")
 					fun.DeclType = strings.ReplaceAll(fun.DeclType, "(__tracing_ctx context.Context", "(")
-					fun.DeclType = strings.ReplaceAll(fun.DeclType, ", __tracing_ctx context.Context", "")
-
 					// check if it's root function or
 					// one of function in call graph
 					// and emit proper ast nodes

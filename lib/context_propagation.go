@@ -72,7 +72,7 @@ func PropagateContext(projectPath string,
 							if isPath(callgraph, fun, rootFunctions[0], visited) {
 								addImports = true
 								if currentFun != "nil" {
-									x.Args = append(x.Args, ctxArg)
+									x.Args = append([]ast.Expr{ctxArg}, x.Args...)
 								} else {
 									contextTodo := &ast.CallExpr{
 										Fun: &ast.SelectorExpr{
@@ -86,7 +86,7 @@ func PropagateContext(projectPath string,
 										Lparen:   62,
 										Ellipsis: 0,
 									}
-									x.Args = append(x.Args, contextTodo)
+									x.Args = append([]ast.Expr{contextTodo}, x.Args...)
 								}
 							}
 						}
@@ -154,7 +154,7 @@ func PropagateContext(projectPath string,
 					fmt.Println("\t\t\tFuncDecl:", funId, pkg.TypesInfo.Defs[x.Name].Type().String())
 					if isPath(callgraph, fun, rootFunctions[0], visited) {
 						addImports = true
-						x.Type.Params.List = append(x.Type.Params.List, ctxField)
+						x.Type.Params.List = append([]*ast.Field{ctxField}, x.Type.Params.List...)
 					}
 				case *ast.CallExpr:
 					ident, ok := x.Fun.(*ast.Ident)
@@ -172,7 +172,7 @@ func PropagateContext(projectPath string,
 					// _, ok = x.Fun.(*ast.FuncLit)
 					// if ok {
 					// 	addImports = true
-					// 	x.Args = append(x.Args, ctxArg)
+					// 	x.Args = append([]ast.Expr{ctxArg}, x.Args...)
 					// }
 					// TODO selectors are recursive
 					// a.b.c.fun()
@@ -183,8 +183,8 @@ func PropagateContext(projectPath string,
 						emitCallExpr(sel.Sel, n, ctxArg)
 					}
 				case *ast.FuncLit:
-					//addImports = true
-					//x.Type.Params.List = append(x.Type.Params.List, ctxField)
+					// addImports = true
+					// x.Type.Params.List = append([]*ast.Field{ctxField}, x.Type.Params.List...)
 				case *ast.InterfaceType:
 					for _, method := range x.Methods.List {
 						if funcType, ok := method.Type.(*ast.FuncType); ok {
@@ -199,7 +199,7 @@ func PropagateContext(projectPath string,
 							fmt.Println("\t\t\tInterfaceType", fun.Id, fun.DeclType)
 							if isPath(callgraph, fun, rootFunctions[0], visited) {
 								addImports = true
-								funcType.Params.List = append(funcType.Params.List, ctxField)
+								funcType.Params.List = append([]*ast.Field{ctxField}, funcType.Params.List...)
 							}
 
 						}
