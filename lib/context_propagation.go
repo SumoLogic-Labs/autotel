@@ -5,8 +5,10 @@ import (
 	"go/ast"
 	"go/printer"
 	"go/token"
+	"go/types"
 	"log"
 	"os"
+	"strings"
 
 	"golang.org/x/tools/go/ast/astutil"
 	"golang.org/x/tools/go/packages"
@@ -93,7 +95,59 @@ func PropagateContext(projectPath string,
 					}
 				}
 			}
+			emitCallExprFromSelector := func(sel *ast.SelectorExpr, n ast.Node, ctxArg *ast.Ident) {
+				switch x := n.(type) {
+				case *ast.CallExpr:
 
+					if pkg.TypesInfo.Uses[sel.Sel] != nil {
+						pkgPath := ""
+						if pkg.TypesInfo.Uses[sel.Sel].Pkg() != nil {
+							pkgPath = pkg.TypesInfo.Uses[sel.Sel].Pkg().Path()
+						}
+						if sel.X != nil {
+							if _, ok := sel.X.(*ast.Ident); ok {
+
+								if pkg.TypesInfo.Uses[sel.X.(*ast.Ident)] != nil {
+									if !strings.Contains(pkg.TypesInfo.Uses[sel.X.(*ast.Ident)].Type().String(), "invalid") {
+										pkgPath = pkg.TypesInfo.Uses[sel.X.(*ast.Ident)].Type().String()
+									}
+								}
+							}
+						}
+						funId := pkgPath + "." + pkg.TypesInfo.Uses[sel.Sel].Name()
+						fun := FuncDescriptor{funId,
+							pkg.TypesInfo.Uses[sel.Sel].Type().String()}
+						found := funcDecls[fun]
+						// inject context parameter only
+						// to these functions for which function decl
+						// exists
+
+						if found {
+							visited := map[FuncDescriptor]bool{}
+							if isPath(callgraph, fun, rootFunctions[0], visited) {
+								addImports = true
+								if currentFun != "nil" {
+									x.Args = append([]ast.Expr{ctxArg}, x.Args...)
+								} else {
+									contextTodo := &ast.CallExpr{
+										Fun: &ast.SelectorExpr{
+											X: &ast.Ident{
+												Name: "context",
+											},
+											Sel: &ast.Ident{
+												Name: "TODO",
+											},
+										},
+										Lparen:   62,
+										Ellipsis: 0,
+									}
+									x.Args = append([]ast.Expr{contextTodo}, x.Args...)
+								}
+							}
+						}
+					}
+				}
+			}
 			ast.Inspect(node, func(n ast.Node) bool {
 				ctxArg := &ast.Ident{
 					Name: "__child_tracing_ctx",
@@ -132,7 +186,25 @@ func PropagateContext(projectPath string,
 					currentFun = funId
 					fun := FuncDescriptor{funId,
 						pkg.TypesInfo.Defs[x.Name].Type().String()}
-
+					if x.Recv != nil {
+						for _, v := range x.Recv.List {
+							for _, dependentpkg := range pkgs {
+								for _, defs := range dependentpkg.TypesInfo.Defs {
+									if defs != nil {
+										if _, ok := defs.Type().Underlying().(*types.Interface); ok {
+											if types.Implements(pkg.TypesInfo.Defs[v.Names[0]].Type(), defs.Type().Underlying().(*types.Interface)) {
+												pkgPath = defs.Type().String()
+												funId := pkgPath + "." + pkg.TypesInfo.Defs[x.Name].Name()
+												fmt.Println("\t\t\tFuncDecl:", funId, pkg.TypesInfo.Defs[x.Name].Type().String())
+												fun = FuncDescriptor{funId, pkg.TypesInfo.Defs[x.Name].Type().String()}
+												currentFun = funId
+											}
+										}
+									}
+								}
+							}
+						}
+					}
 					for k, v := range callgraph {
 						if k.TypeHash() == fun.TypeHash() {
 							exists = true
@@ -180,7 +252,7 @@ func PropagateContext(projectPath string,
 					sel, ok := x.Fun.(*ast.SelectorExpr)
 
 					if ok {
-						emitCallExpr(sel.Sel, n, ctxArg)
+						emitCallExprFromSelector(sel, n, ctxArg)
 					}
 				case *ast.FuncLit:
 					addImports = true
