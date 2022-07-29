@@ -117,6 +117,7 @@ func PropagateContext(projectPath string,
 						funId := pkgPath + "." + pkg.TypesInfo.Uses[sel.Sel].Name()
 						fun := FuncDescriptor{funId,
 							pkg.TypesInfo.Uses[sel.Sel].Type().String()}
+						fmt.Println("FuncCall via selector: ", fun)
 						found := funcDecls[fun]
 						// inject context parameter only
 						// to these functions for which function decl
@@ -179,13 +180,7 @@ func PropagateContext(projectPath string,
 					// TODO this is not optimap o(n)
 					exists := false
 					pkgPath := ""
-					if pkg.TypesInfo.Defs[x.Name].Pkg() != nil {
-						pkgPath = pkg.TypesInfo.Defs[x.Name].Pkg().Path()
-					}
-					funId := pkgPath + "." + pkg.TypesInfo.Defs[x.Name].Name()
-					currentFun = funId
-					fun := FuncDescriptor{funId,
-						pkg.TypesInfo.Defs[x.Name].Type().String()}
+
 					if x.Recv != nil {
 						for _, v := range x.Recv.List {
 							for _, dependentpkg := range pkgs {
@@ -194,17 +189,27 @@ func PropagateContext(projectPath string,
 										if _, ok := defs.Type().Underlying().(*types.Interface); ok {
 											if types.Implements(pkg.TypesInfo.Defs[v.Names[0]].Type(), defs.Type().Underlying().(*types.Interface)) {
 												pkgPath = defs.Type().String()
-												funId := pkgPath + "." + pkg.TypesInfo.Defs[x.Name].Name()
-												fmt.Println("\t\t\tFuncDecl:", funId, pkg.TypesInfo.Defs[x.Name].Type().String())
-												fun = FuncDescriptor{funId, pkg.TypesInfo.Defs[x.Name].Type().String()}
-												currentFun = funId
+												break
+											}
+										} else {
+											if pkg.TypesInfo.Defs[v.Names[0]] != nil {
+												pkgPath = pkg.TypesInfo.Defs[v.Names[0]].Type().String()
 											}
 										}
 									}
 								}
 							}
 						}
+					} else {
+						if pkg.TypesInfo.Defs[x.Name].Pkg() != nil {
+							pkgPath = pkg.TypesInfo.Defs[x.Name].Pkg().Path()
+						}
 					}
+					funId := pkgPath + "." + pkg.TypesInfo.Defs[x.Name].Name()
+					currentFun = funId
+					fun := FuncDescriptor{funId,
+						pkg.TypesInfo.Defs[x.Name].Type().String()}
+
 					for k, v := range callgraph {
 						if k.TypeHash() == fun.TypeHash() {
 							exists = true
@@ -215,15 +220,16 @@ func PropagateContext(projectPath string,
 							}
 						}
 					}
+					//fmt.Println("before exits", fun)
 					if !exists {
 						break
 					}
-
+					//fmt.Println("before contains")
 					if Contains(rootFunctions, fun) {
 						break
 					}
 					visited := map[FuncDescriptor]bool{}
-					fmt.Println("\t\t\tFuncDecl:", funId, pkg.TypesInfo.Defs[x.Name].Type().String())
+					fmt.Println("\t\t\tFuncDecl:", fun)
 					if isPath(callgraph, fun, rootFunctions[0], visited) {
 						addImports = true
 						x.Type.Params.List = append([]*ast.Field{ctxField}, x.Type.Params.List...)

@@ -128,12 +128,6 @@ func BuildCallGraph(projectPath string, packagePattern string, funcDecls map[Fun
 					}
 				case *ast.FuncDecl:
 					pkgPath := ""
-					if pkg.TypesInfo.Defs[x.Name].Pkg() != nil {
-						pkgPath = pkg.TypesInfo.Defs[x.Name].Pkg().Path()
-					}
-					funId := pkgPath + "." + pkg.TypesInfo.Defs[x.Name].Name()
-					currentFun = FuncDescriptor{funId, pkg.TypesInfo.Defs[x.Name].Type().String()}
-					fmt.Println("\t\t\tFuncDecl:", funId, pkg.TypesInfo.Defs[x.Name].Type().String())
 					if x.Recv != nil {
 						for _, v := range x.Recv.List {
 							for _, dependentpkg := range pkgs {
@@ -142,17 +136,26 @@ func BuildCallGraph(projectPath string, packagePattern string, funcDecls map[Fun
 										if _, ok := defs.Type().Underlying().(*types.Interface); ok {
 											if types.Implements(pkg.TypesInfo.Defs[v.Names[0]].Type(), defs.Type().Underlying().(*types.Interface)) {
 												pkgPath = defs.Type().String()
-												funId := pkgPath + "." + pkg.TypesInfo.Defs[x.Name].Name()
-												fmt.Println("\t\t\tFuncDecl:", funId, pkg.TypesInfo.Defs[x.Name].Type().String())
-												funcDecls[FuncDescriptor{funId, pkg.TypesInfo.Defs[x.Name].Type().String()}] = true
-												currentFun = FuncDescriptor{funId, pkg.TypesInfo.Defs[x.Name].Type().String()}
+												break
+											}
+										} else {
+											if pkg.TypesInfo.Defs[v.Names[0]] != nil {
+												pkgPath = pkg.TypesInfo.Defs[v.Names[0]].Type().String()
 											}
 										}
 									}
 								}
 							}
 						}
+					} else {
+						if pkg.TypesInfo.Defs[x.Name].Pkg() != nil {
+							pkgPath = pkg.TypesInfo.Defs[x.Name].Pkg().Path()
+						}
 					}
+					funId := pkgPath + "." + pkg.TypesInfo.Defs[x.Name].Name()
+					funcDecls[FuncDescriptor{funId, pkg.TypesInfo.Defs[x.Name].Type().String()}] = true
+					currentFun = FuncDescriptor{funId, pkg.TypesInfo.Defs[x.Name].Type().String()}
+					fmt.Println("\t\t\tFuncDecl:", funId, pkg.TypesInfo.Defs[x.Name].Type().String())
 				}
 				return true
 			})
@@ -178,12 +181,6 @@ func FindFuncDecls(projectPath string, packagePattern string) map[FuncDescriptor
 				switch x := n.(type) {
 				case *ast.FuncDecl:
 					pkgPath := ""
-					if pkg.TypesInfo.Defs[x.Name].Pkg() != nil {
-						pkgPath = pkg.TypesInfo.Defs[x.Name].Pkg().Path()
-					}
-					funId := pkgPath + "." + pkg.TypesInfo.Defs[x.Name].Name()
-					fmt.Println("\t\t\tFuncDecl:", funId, pkg.TypesInfo.Defs[x.Name].Type().String())
-					funcDecls[FuncDescriptor{funId, pkg.TypesInfo.Defs[x.Name].Type().String()}] = true
 
 					if x.Recv != nil {
 						for _, v := range x.Recv.List {
@@ -193,16 +190,21 @@ func FindFuncDecls(projectPath string, packagePattern string) map[FuncDescriptor
 										if _, ok := defs.Type().Underlying().(*types.Interface); ok {
 											if types.Implements(pkg.TypesInfo.Defs[v.Names[0]].Type(), defs.Type().Underlying().(*types.Interface)) {
 												pkgPath = defs.Type().String()
-												funId := pkgPath + "." + pkg.TypesInfo.Defs[x.Name].Name()
-												fmt.Println("\t\t\tFuncDecl:", funId, pkg.TypesInfo.Defs[x.Name].Type().String())
-												funcDecls[FuncDescriptor{funId, pkg.TypesInfo.Defs[x.Name].Type().String()}] = true
 											}
 										}
 									}
 								}
 							}
 						}
+					} else {
+						if pkg.TypesInfo.Defs[x.Name].Pkg() != nil {
+							pkgPath = pkg.TypesInfo.Defs[x.Name].Pkg().Path()
+						}
 					}
+					funId := pkgPath + "." + pkg.TypesInfo.Defs[x.Name].Name()
+					fmt.Println("\t\t\tFuncDecl:", funId, pkg.TypesInfo.Defs[x.Name].Type().String())
+					funcDecls[FuncDescriptor{funId, pkg.TypesInfo.Defs[x.Name].Type().String()}] = true
+
 				}
 				return true
 			})
