@@ -5,6 +5,7 @@ import (
 	"go/ast"
 	"go/printer"
 	"go/token"
+	"go/types"
 	"log"
 	"os"
 	"strings"
@@ -88,8 +89,30 @@ func Instrument(projectPath string,
 				switch x := n.(type) {
 				case *ast.FuncDecl:
 					pkgPath := ""
-					if pkg.TypesInfo.Defs[x.Name].Pkg() != nil {
-						pkgPath = pkg.TypesInfo.Defs[x.Name].Pkg().Path()
+
+					if x.Recv != nil {
+						for _, v := range x.Recv.List {
+							for _, dependentpkg := range pkgs {
+								for _, defs := range dependentpkg.TypesInfo.Defs {
+									if defs != nil {
+										if _, ok := defs.Type().Underlying().(*types.Interface); ok {
+											if types.Implements(pkg.TypesInfo.Defs[v.Names[0]].Type(), defs.Type().Underlying().(*types.Interface)) {
+												pkgPath = defs.Type().String()
+												break
+											}
+										} else {
+											if pkg.TypesInfo.Defs[v.Names[0]] != nil {
+												pkgPath = pkg.TypesInfo.Defs[v.Names[0]].Type().String()
+											}
+										}
+									}
+								}
+							}
+						}
+					} else {
+						if pkg.TypesInfo.Defs[x.Name].Pkg() != nil {
+							pkgPath = pkg.TypesInfo.Defs[x.Name].Pkg().Path()
+						}
 					}
 					fundId := pkgPath + "." + pkg.TypesInfo.Defs[x.Name].Name()
 					fun := FuncDescriptor{fundId, pkg.TypesInfo.Defs[x.Name].Type().String()}
