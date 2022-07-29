@@ -66,6 +66,22 @@ func FindRootFunctions(projectPath string, packagePattern string) []FuncDescript
 	return rootFunctions
 }
 
+func getMostInnerAstIdent(sel *ast.SelectorExpr) *ast.Ident {
+	var l []*ast.Ident
+	for sel != nil {
+		l = append(l, sel.Sel)
+		if _, ok := sel.X.(*ast.SelectorExpr); ok {
+			sel = sel.X.(*ast.SelectorExpr)
+		} else {
+			l = append(l, sel.X.(*ast.Ident))
+			break
+		}
+	}
+	// caller or receiver is always
+	// at position 1, function is at 0
+	return l[1]
+}
+
 func BuildCallGraph(projectPath string, packagePattern string, funcDecls map[FuncDescriptor]bool) map[FuncDescriptor][]FuncDescriptor {
 	fset := token.NewFileSet()
 	cfg := &packages.Config{Fset: fset, Mode: mode, Dir: projectPath}
@@ -107,12 +123,10 @@ func BuildCallGraph(projectPath string, packagePattern string, funcDecls map[Fun
 								pkgPath = pkg.TypesInfo.Uses[sel.Sel].Pkg().Path()
 							}
 							if sel.X != nil {
-								if _, ok := sel.X.(*ast.Ident); ok {
-
-									if pkg.TypesInfo.Uses[sel.X.(*ast.Ident)] != nil {
-										if !strings.Contains(pkg.TypesInfo.Uses[sel.X.(*ast.Ident)].Type().String(), "invalid") {
-											pkgPath = pkg.TypesInfo.Uses[sel.X.(*ast.Ident)].Type().String()
-										}
+								caller := getMostInnerAstIdent(sel)
+								if pkg.TypesInfo.Uses[caller] != nil {
+									if !strings.Contains(pkg.TypesInfo.Uses[caller].Type().String(), "invalid") {
+										pkgPath = pkg.TypesInfo.Uses[caller].Type().String()
 									}
 								}
 							}
@@ -190,6 +204,10 @@ func FindFuncDecls(projectPath string, packagePattern string) map[FuncDescriptor
 										if _, ok := defs.Type().Underlying().(*types.Interface); ok {
 											if types.Implements(pkg.TypesInfo.Defs[v.Names[0]].Type(), defs.Type().Underlying().(*types.Interface)) {
 												pkgPath = defs.Type().String()
+											} else {
+												if pkg.TypesInfo.Defs[v.Names[0]] != nil {
+													pkgPath = pkg.TypesInfo.Defs[v.Names[0]].Type().String()
+												}
 											}
 										}
 									}
