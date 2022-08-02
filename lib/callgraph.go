@@ -66,16 +66,28 @@ func FindRootFunctions(projectPath string, packagePattern string) []FuncDescript
 	return rootFunctions
 }
 
-func getMostInnerAstIdent(sel *ast.SelectorExpr) *ast.Ident {
+func GetMostInnerAstIdent(sel *ast.SelectorExpr) *ast.Ident {
 	var l []*ast.Ident
 	for sel != nil {
 		l = append(l, sel.Sel)
 		if _, ok := sel.X.(*ast.SelectorExpr); ok {
 			sel = sel.X.(*ast.SelectorExpr)
+		} else if call, ok := sel.X.(*ast.CallExpr); ok {
+			id, ok := call.Fun.(*ast.Ident)
+			// TODO handle this case
+			if ok {
+				l = append(l, id)
+			}
+			break
 		} else {
 			l = append(l, sel.X.(*ast.Ident))
 			break
 		}
+	}
+	// TODO this is related to callexpr case
+	// a.foo(1).bar(2)
+	if len(l) < 2 {
+		return nil
 	}
 	// caller or receiver is always
 	// at position 1, function is at 0
@@ -123,10 +135,12 @@ func BuildCallGraph(projectPath string, packagePattern string, funcDecls map[Fun
 								pkgPath = pkg.TypesInfo.Uses[sel.Sel].Pkg().Path()
 							}
 							if sel.X != nil {
-								caller := getMostInnerAstIdent(sel)
-								if pkg.TypesInfo.Uses[caller] != nil {
-									if !strings.Contains(pkg.TypesInfo.Uses[caller].Type().String(), "invalid") {
-										pkgPath = pkg.TypesInfo.Uses[caller].Type().String()
+								caller := GetMostInnerAstIdent(sel)
+								if caller != nil {
+									if pkg.TypesInfo.Uses[caller] != nil {
+										if !strings.Contains(pkg.TypesInfo.Uses[caller].Type().String(), "invalid") {
+											pkgPath = pkg.TypesInfo.Uses[caller].Type().String()
+										}
 									}
 								}
 							}
