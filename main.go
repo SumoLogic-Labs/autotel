@@ -29,6 +29,13 @@ func inject(root string, packagePattern string) {
 	funcDecls := alib.FindFuncDecls(root, packagePattern)
 	backwardCallGraph := alib.BuildCallGraph(root, packagePattern, funcDecls)
 
+	fmt.Println("\n\tchild parent")
+	for k, v := range backwardCallGraph {
+		fmt.Print("\n\t", k)
+		fmt.Print(" ", v)
+	}
+	fmt.Println("")
+
 	alib.ExecutePasses(root, packagePattern, rootFunctions, funcDecls, backwardCallGraph)
 }
 
@@ -39,6 +46,13 @@ func injectAndDumpIr(root string, packagePattern string) {
 
 	funcDecls := alib.FindFuncDecls(root, packagePattern)
 	backwardCallGraph := alib.BuildCallGraph(root, packagePattern, funcDecls)
+
+	fmt.Println("\n\tchild parent")
+	for k, v := range backwardCallGraph {
+		fmt.Print("\n\t", k)
+		fmt.Print(" ", v)
+	}
+	fmt.Println("")
 
 	alib.ExecutePassesDumpIr(root, packagePattern, rootFunctions, funcDecls, backwardCallGraph)
 }

@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"go/ast"
 	"go/token"
+	"go/types"
 	"log"
 	"os"
 	"strconv"
+	"strings"
 
 	"golang.org/x/tools/go/packages"
 )
@@ -64,6 +66,36 @@ func FindRootFunctions(projectPath string, packagePattern string) []FuncDescript
 	return rootFunctions
 }
 
+func GetMostInnerAstIdent(sel *ast.SelectorExpr) *ast.Ident {
+	var l []*ast.Ident
+	for sel != nil {
+		l = append(l, sel.Sel)
+		if _, ok := sel.X.(*ast.SelectorExpr); ok {
+			sel = sel.X.(*ast.SelectorExpr)
+		} else if call, ok := sel.X.(*ast.CallExpr); ok {
+			id, ok := call.Fun.(*ast.Ident)
+			// TODO handle this case
+			if ok {
+				l = append(l, id)
+			}
+			break
+		} else if _, ok := sel.X.(*ast.IndexExpr); ok {
+			break
+		} else {
+			l = append(l, sel.X.(*ast.Ident))
+			break
+		}
+	}
+	// TODO this is related to callexpr case
+	// a.foo(1).bar(2)
+	if len(l) < 2 {
+		return nil
+	}
+	// caller or receiver is always
+	// at position 1, function is at 0
+	return l[1]
+}
+
 func BuildCallGraph(projectPath string, packagePattern string, funcDecls map[FuncDescriptor]bool) map[FuncDescriptor][]FuncDescriptor {
 	fset := token.NewFileSet()
 	cfg := &packages.Config{Fset: fset, Mode: mode, Dir: projectPath}
@@ -104,6 +136,16 @@ func BuildCallGraph(projectPath string, packagePattern string, funcDecls map[Fun
 							if pkg.TypesInfo.Uses[sel.Sel].Pkg() != nil {
 								pkgPath = pkg.TypesInfo.Uses[sel.Sel].Pkg().Path()
 							}
+							if sel.X != nil {
+								caller := GetMostInnerAstIdent(sel)
+								if caller != nil {
+									if pkg.TypesInfo.Uses[caller] != nil {
+										if !strings.Contains(pkg.TypesInfo.Uses[caller].Type().String(), "invalid") {
+											pkgPath = pkg.TypesInfo.Uses[caller].Type().String()
+										}
+									}
+								}
+							}
 							funId := pkgPath + "." + pkg.TypesInfo.Uses[sel.Sel].Name()
 							fmt.Println("\t\t\tFuncCall via selector:", funId, pkg.TypesInfo.Uses[sel.Sel].Type().String(), " @called : ", fset.File(node.Pos()).Name())
 							fun := FuncDescriptor{funId, pkg.TypesInfo.Uses[sel.Sel].Type().String()}
@@ -116,10 +158,32 @@ func BuildCallGraph(projectPath string, packagePattern string, funcDecls map[Fun
 					}
 				case *ast.FuncDecl:
 					pkgPath := ""
-					if pkg.TypesInfo.Defs[x.Name].Pkg() != nil {
-						pkgPath = pkg.TypesInfo.Defs[x.Name].Pkg().Path()
+					if x.Recv != nil {
+						for _, v := range x.Recv.List {
+							for _, dependentpkg := range pkgs {
+								for _, defs := range dependentpkg.TypesInfo.Defs {
+									if defs != nil {
+										if _, ok := defs.Type().Underlying().(*types.Interface); ok {
+											if types.Implements(pkg.TypesInfo.Defs[v.Names[0]].Type(), defs.Type().Underlying().(*types.Interface)) {
+												pkgPath = defs.Type().String()
+												break
+											}
+										} else {
+											if pkg.TypesInfo.Defs[v.Names[0]] != nil {
+												pkgPath = pkg.TypesInfo.Defs[v.Names[0]].Type().String()
+											}
+										}
+									}
+								}
+							}
+						}
+					} else {
+						if pkg.TypesInfo.Defs[x.Name].Pkg() != nil {
+							pkgPath = pkg.TypesInfo.Defs[x.Name].Pkg().Path()
+						}
 					}
 					funId := pkgPath + "." + pkg.TypesInfo.Defs[x.Name].Name()
+					funcDecls[FuncDescriptor{funId, pkg.TypesInfo.Defs[x.Name].Type().String()}] = true
 					currentFun = FuncDescriptor{funId, pkg.TypesInfo.Defs[x.Name].Type().String()}
 					fmt.Println("\t\t\tFuncDecl:", funId, pkg.TypesInfo.Defs[x.Name].Type().String())
 				}
@@ -147,12 +211,34 @@ func FindFuncDecls(projectPath string, packagePattern string) map[FuncDescriptor
 				switch x := n.(type) {
 				case *ast.FuncDecl:
 					pkgPath := ""
-					if pkg.TypesInfo.Defs[x.Name].Pkg() != nil {
-						pkgPath = pkg.TypesInfo.Defs[x.Name].Pkg().Path()
+
+					if x.Recv != nil {
+						for _, v := range x.Recv.List {
+							for _, dependentpkg := range pkgs {
+								for _, defs := range dependentpkg.TypesInfo.Defs {
+									if defs != nil {
+										if _, ok := defs.Type().Underlying().(*types.Interface); ok {
+											if types.Implements(pkg.TypesInfo.Defs[v.Names[0]].Type(), defs.Type().Underlying().(*types.Interface)) {
+												pkgPath = defs.Type().String()
+											} else {
+												if pkg.TypesInfo.Defs[v.Names[0]] != nil {
+													pkgPath = pkg.TypesInfo.Defs[v.Names[0]].Type().String()
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					} else {
+						if pkg.TypesInfo.Defs[x.Name].Pkg() != nil {
+							pkgPath = pkg.TypesInfo.Defs[x.Name].Pkg().Path()
+						}
 					}
 					funId := pkgPath + "." + pkg.TypesInfo.Defs[x.Name].Name()
 					fmt.Println("\t\t\tFuncDecl:", funId, pkg.TypesInfo.Defs[x.Name].Type().String())
 					funcDecls[FuncDescriptor{funId, pkg.TypesInfo.Defs[x.Name].Type().String()}] = true
+
 				}
 				return true
 			})

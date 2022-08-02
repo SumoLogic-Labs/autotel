@@ -5,8 +5,10 @@ import (
 	"go/ast"
 	"go/printer"
 	"go/token"
+	"go/types"
 	"log"
 	"os"
+	"strings"
 
 	"golang.org/x/tools/go/ast/astutil"
 	"golang.org/x/tools/go/packages"
@@ -37,7 +39,7 @@ func PropagateContext(projectPath string,
 				out, _ = os.Create(fset.File(node.Pos()).Name() + passFileSuffix)
 				defer out.Close()
 			} else {
-				out, _ = os.Create(fset.File(node.Pos()).Name() + "ir_context")
+				out, _ = os.Create(fset.File(node.Pos()).Name() + "ir_instr")
 				defer out.Close()
 			}
 
@@ -93,7 +95,62 @@ func PropagateContext(projectPath string,
 					}
 				}
 			}
+			emitCallExprFromSelector := func(sel *ast.SelectorExpr, n ast.Node, ctxArg *ast.Ident) {
+				switch x := n.(type) {
+				case *ast.CallExpr:
 
+					if pkg.TypesInfo.Uses[sel.Sel] != nil {
+						pkgPath := ""
+						if pkg.TypesInfo.Uses[sel.Sel].Pkg() != nil {
+							pkgPath = pkg.TypesInfo.Uses[sel.Sel].Pkg().Path()
+						}
+						if sel.X != nil {
+							if sel.X != nil {
+								caller := GetMostInnerAstIdent(sel)
+								if caller != nil {
+									if pkg.TypesInfo.Uses[caller] != nil {
+										if !strings.Contains(pkg.TypesInfo.Uses[caller].Type().String(), "invalid") {
+											pkgPath = pkg.TypesInfo.Uses[caller].Type().String()
+										}
+									}
+								}
+							}
+						}
+						funId := pkgPath + "." + pkg.TypesInfo.Uses[sel.Sel].Name()
+						fun := FuncDescriptor{funId,
+							pkg.TypesInfo.Uses[sel.Sel].Type().String()}
+						fmt.Println("\t\t\tFuncCall via selector:", funId, pkg.TypesInfo.Uses[sel.Sel].Type().String(), " @called : ", fset.File(node.Pos()).Name())
+						found := funcDecls[fun]
+						// inject context parameter only
+						// to these functions for which function decl
+						// exists
+
+						if found {
+							visited := map[FuncDescriptor]bool{}
+							if isPath(callgraph, fun, rootFunctions[0], visited) {
+								addImports = true
+								if currentFun != "nil" {
+									x.Args = append([]ast.Expr{ctxArg}, x.Args...)
+								} else {
+									contextTodo := &ast.CallExpr{
+										Fun: &ast.SelectorExpr{
+											X: &ast.Ident{
+												Name: "context",
+											},
+											Sel: &ast.Ident{
+												Name: "TODO",
+											},
+										},
+										Lparen:   62,
+										Ellipsis: 0,
+									}
+									x.Args = append([]ast.Expr{contextTodo}, x.Args...)
+								}
+							}
+						}
+					}
+				}
+			}
 			ast.Inspect(node, func(n ast.Node) bool {
 				ctxArg := &ast.Ident{
 					Name: "__child_tracing_ctx",
@@ -125,8 +182,30 @@ func PropagateContext(projectPath string,
 					// TODO this is not optimap o(n)
 					exists := false
 					pkgPath := ""
-					if pkg.TypesInfo.Defs[x.Name].Pkg() != nil {
-						pkgPath = pkg.TypesInfo.Defs[x.Name].Pkg().Path()
+
+					if x.Recv != nil {
+						for _, v := range x.Recv.List {
+							for _, dependentpkg := range pkgs {
+								for _, defs := range dependentpkg.TypesInfo.Defs {
+									if defs != nil {
+										if _, ok := defs.Type().Underlying().(*types.Interface); ok {
+											if types.Implements(pkg.TypesInfo.Defs[v.Names[0]].Type(), defs.Type().Underlying().(*types.Interface)) {
+												pkgPath = defs.Type().String()
+												break
+											}
+										} else {
+											if pkg.TypesInfo.Defs[v.Names[0]] != nil {
+												pkgPath = pkg.TypesInfo.Defs[v.Names[0]].Type().String()
+											}
+										}
+									}
+								}
+							}
+						}
+					} else {
+						if pkg.TypesInfo.Defs[x.Name].Pkg() != nil {
+							pkgPath = pkg.TypesInfo.Defs[x.Name].Pkg().Path()
+						}
 					}
 					funId := pkgPath + "." + pkg.TypesInfo.Defs[x.Name].Name()
 					currentFun = funId
@@ -143,15 +222,16 @@ func PropagateContext(projectPath string,
 							}
 						}
 					}
+					//fmt.Println("before exits", fun)
 					if !exists {
 						break
 					}
-
+					//fmt.Println("before contains")
 					if Contains(rootFunctions, fun) {
 						break
 					}
 					visited := map[FuncDescriptor]bool{}
-					fmt.Println("\t\t\tFuncDecl:", funId, pkg.TypesInfo.Defs[x.Name].Type().String())
+					fmt.Println("\t\t\tFuncDecl:", fun)
 					if isPath(callgraph, fun, rootFunctions[0], visited) {
 						addImports = true
 						x.Type.Params.List = append([]*ast.Field{ctxField}, x.Type.Params.List...)
@@ -180,28 +260,32 @@ func PropagateContext(projectPath string,
 					sel, ok := x.Fun.(*ast.SelectorExpr)
 
 					if ok {
-						emitCallExpr(sel.Sel, n, ctxArg)
+						emitCallExprFromSelector(sel, n, ctxArg)
 					}
 				case *ast.FuncLit:
 					addImports = true
 					x.Type.Params.List = append([]*ast.Field{ctxField}, x.Type.Params.List...)
-				case *ast.InterfaceType:
-					for _, method := range x.Methods.List {
-						if funcType, ok := method.Type.(*ast.FuncType); ok {
-							visited := map[FuncDescriptor]bool{}
-							pkgPath := ""
-							if pkg.TypesInfo.Defs[method.Names[0]].Pkg() != nil {
-								pkgPath = pkg.TypesInfo.Defs[method.Names[0]].Pkg().Path()
-							}
-							funId := pkgPath + "." + pkg.TypesInfo.Defs[method.Names[0]].Name()
-							fun := FuncDescriptor{funId,
-								pkg.TypesInfo.Defs[method.Names[0]].Type().String()}
-							fmt.Println("\t\t\tInterfaceType", fun.Id, fun.DeclType)
-							if isPath(callgraph, fun, rootFunctions[0], visited) {
-								addImports = true
-								funcType.Params.List = append([]*ast.Field{ctxField}, funcType.Params.List...)
-							}
 
+				case *ast.TypeSpec:
+					iname := x.Name
+					if iface, ok := x.Type.(*ast.InterfaceType); ok {
+						for _, method := range iface.Methods.List {
+							if funcType, ok := method.Type.(*ast.FuncType); ok {
+								visited := map[FuncDescriptor]bool{}
+								pkgPath := ""
+								if pkg.TypesInfo.Defs[method.Names[0]].Pkg() != nil {
+									pkgPath = pkg.TypesInfo.Defs[method.Names[0]].Pkg().Path()
+								}
+								funId := pkgPath + "." + iname.Name + "." + pkg.TypesInfo.Defs[method.Names[0]].Name()
+								fun := FuncDescriptor{funId,
+									pkg.TypesInfo.Defs[method.Names[0]].Type().String()}
+								fmt.Println("\t\t\tInterfaceType", fun.Id, fun.DeclType)
+								if isPath(callgraph, fun, rootFunctions[0], visited) {
+									addImports = true
+									funcType.Params.List = append([]*ast.Field{ctxField}, funcType.Params.List...)
+								}
+
+							}
 						}
 					}
 				}
@@ -215,9 +299,9 @@ func PropagateContext(projectPath string,
 
 			printer.Fprint(out, fset, node)
 			if len(passFileSuffix) > 0 {
-				os.Rename(fset.File(node.Pos()).Name(), fset.File(node.Pos()).Name()+".original")
+				os.Rename(fset.File(node.Pos()).Name(), fset.File(node.Pos()).Name()+".tmp")
 			} else {
-				os.Rename(fset.File(node.Pos()).Name()+"ir_context", fset.File(node.Pos()).Name())
+				os.Rename(fset.File(node.Pos()).Name()+"ir_instr", fset.File(node.Pos()).Name())
 			}
 		}
 	}

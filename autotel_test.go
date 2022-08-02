@@ -19,6 +19,8 @@ var testcases = map[string]string{
 	"./tests/recursion":  "./tests/expected/recursion",
 }
 
+var failures []string
+
 func Test(t *testing.T) {
 
 	for k, v := range testcases {
@@ -36,11 +38,17 @@ func Test(t *testing.T) {
 					require.NoError(t, err1)
 					f2, err2 := ioutil.ReadFile(expectedFile)
 					require.NoError(t, err2)
-					assert.True(t, bytes.Equal(f1, f2))
+					if !assert.True(t, bytes.Equal(f1, f2)) {
+						fmt.Println(k)
+						failures = append(failures, k)
+					}
 				}
 			}
 
 		}
 		lib.Revert(k)
+	}
+	for _,f := range failures {
+	    fmt.Println("FAILURE : ", f)
 	}
 }

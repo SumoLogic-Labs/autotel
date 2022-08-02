@@ -11,6 +11,12 @@ func ExecutePassesDumpIr(projectPath string,
 	funcDecls map[FuncDescriptor]bool,
 	backwardCallGraph map[FuncDescriptor][]FuncDescriptor) {
 
+	Instrument(projectPath,
+		packagePattern,
+		backwardCallGraph,
+		rootFunctions,
+		instrumentationPassFileSuffix)
+
 	PropagateContext(projectPath,
 		packagePattern,
 		backwardCallGraph,
@@ -18,12 +24,6 @@ func ExecutePassesDumpIr(projectPath string,
 		funcDecls,
 		contextPassFileSuffix)
 
-	Instrument(projectPath,
-		packagePattern,
-		string("")+contextPassFileSuffix,
-		backwardCallGraph,
-		rootFunctions,
-		instrumentationPassFileSuffix)
 }
 
 func ExecutePasses(projectPath string,
@@ -32,6 +32,12 @@ func ExecutePasses(projectPath string,
 	funcDecls map[FuncDescriptor]bool,
 	backwardCallGraph map[FuncDescriptor][]FuncDescriptor) {
 
+	Instrument(projectPath,
+		packagePattern,
+		backwardCallGraph,
+		rootFunctions,
+		"")
+
 	PropagateContext(projectPath,
 		packagePattern,
 		backwardCallGraph,
@@ -39,10 +45,4 @@ func ExecutePasses(projectPath string,
 		funcDecls,
 		"")
 
-	Instrument(projectPath,
-		packagePattern,
-		"",
-		backwardCallGraph,
-		rootFunctions,
-		"")
 }

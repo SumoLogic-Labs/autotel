@@ -5,9 +5,9 @@ import (
 	"go/ast"
 	"go/printer"
 	"go/token"
+	"go/types"
 	"log"
 	"os"
-	"strings"
 
 	"golang.org/x/tools/go/ast/astutil"
 	"golang.org/x/tools/go/packages"
@@ -15,7 +15,6 @@ import (
 
 func Instrument(projectPath string,
 	packagePattern string,
-	file string,
 	callgraph map[FuncDescriptor][]FuncDescriptor,
 	rootFunctions []FuncDescriptor,
 	passFileSuffix string) {
@@ -40,7 +39,7 @@ func Instrument(projectPath string,
 				out, _ = os.Create(fset.File(node.Pos()).Name() + passFileSuffix)
 				defer out.Close()
 			} else {
-				out, _ = os.Create(fset.File(node.Pos()).Name() + "ir_instr")
+				out, _ = os.Create(fset.File(node.Pos()).Name() + "ir_context")
 				defer out.Close()
 			}
 			if len(rootFunctions) == 0 {
@@ -88,17 +87,33 @@ func Instrument(projectPath string,
 				switch x := n.(type) {
 				case *ast.FuncDecl:
 					pkgPath := ""
-					if pkg.TypesInfo.Defs[x.Name].Pkg() != nil {
-						pkgPath = pkg.TypesInfo.Defs[x.Name].Pkg().Path()
+
+					if x.Recv != nil {
+						for _, v := range x.Recv.List {
+							for _, dependentpkg := range pkgs {
+								for _, defs := range dependentpkg.TypesInfo.Defs {
+									if defs != nil {
+										if _, ok := defs.Type().Underlying().(*types.Interface); ok {
+											if types.Implements(pkg.TypesInfo.Defs[v.Names[0]].Type(), defs.Type().Underlying().(*types.Interface)) {
+												pkgPath = defs.Type().String()
+												break
+											}
+										} else {
+											if pkg.TypesInfo.Defs[v.Names[0]] != nil {
+												pkgPath = pkg.TypesInfo.Defs[v.Names[0]].Type().String()
+											}
+										}
+									}
+								}
+							}
+						}
+					} else {
+						if pkg.TypesInfo.Defs[x.Name].Pkg() != nil {
+							pkgPath = pkg.TypesInfo.Defs[x.Name].Pkg().Path()
+						}
 					}
 					fundId := pkgPath + "." + pkg.TypesInfo.Defs[x.Name].Name()
 					fun := FuncDescriptor{fundId, pkg.TypesInfo.Defs[x.Name].Type().String()}
-					// that's kind a trick
-					// context propagation pass adds additional context parameter
-					// this additional parameter has to be removed to match
-					// what's already in function callgraph
-					fun.DeclType = strings.ReplaceAll(fun.DeclType, "(__tracing_ctx context.Context, ", "(")
-					fun.DeclType = strings.ReplaceAll(fun.DeclType, "(__tracing_ctx context.Context", "(")
 					// check if it's root function or
 					// one of function in call graph
 					// and emit proper ast nodes
@@ -518,9 +533,9 @@ func Instrument(projectPath string,
 			}
 			printer.Fprint(out, fset, node)
 			if len(passFileSuffix) > 0 {
-				os.Rename(fset.File(node.Pos()).Name(), fset.File(node.Pos()).Name()+".tmp")
+				os.Rename(fset.File(node.Pos()).Name(), fset.File(node.Pos()).Name()+".original")
 			} else {
-				os.Rename(fset.File(node.Pos()).Name()+"ir_instr", fset.File(node.Pos()).Name())
+				os.Rename(fset.File(node.Pos()).Name()+"ir_context", fset.File(node.Pos()).Name())
 			}
 		}
 
