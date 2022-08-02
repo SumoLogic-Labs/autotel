@@ -79,6 +79,8 @@ func GetMostInnerAstIdent(sel *ast.SelectorExpr) *ast.Ident {
 				l = append(l, id)
 			}
 			break
+		} else if _, ok := sel.X.(*ast.IndexExpr); ok {
+			break
 		} else {
 			l = append(l, sel.X.(*ast.Ident))
 			break
