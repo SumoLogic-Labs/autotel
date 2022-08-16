@@ -125,6 +125,11 @@ func PropagateContext(projectPath string,
 									if pkg.TypesInfo.Uses[caller] != nil {
 										if !strings.Contains(pkg.TypesInfo.Uses[caller].Type().String(), "invalid") {
 											pkgPath = pkg.TypesInfo.Uses[caller].Type().String()
+											// We don't care if that's pointer, remove it from
+											// type id
+											if _, ok := pkg.TypesInfo.Uses[caller].Type().(*types.Pointer); ok {
+												pkgPath = strings.TrimPrefix(pkgPath, "*")
+											}
 										}
 									}
 								}
@@ -210,6 +215,11 @@ func PropagateContext(projectPath string,
 										} else {
 											if pkg.TypesInfo.Defs[v.Names[0]] != nil {
 												pkgPath = pkg.TypesInfo.Defs[v.Names[0]].Type().String()
+												// We don't care if that's pointer, remove it from
+												// type id
+												if _, ok := pkg.TypesInfo.Defs[v.Names[0]].Type().(*types.Pointer); ok {
+													pkgPath = strings.TrimPrefix(pkgPath, "*")
+												}
 											}
 										}
 									}

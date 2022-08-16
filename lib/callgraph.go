@@ -156,11 +156,17 @@ func BuildCallGraph(projectPath string, packagePattern string, funcDecls map[Fun
 									if pkg.TypesInfo.Uses[caller] != nil {
 										if !strings.Contains(pkg.TypesInfo.Uses[caller].Type().String(), "invalid") {
 											pkgPath = pkg.TypesInfo.Uses[caller].Type().String()
+											// We don't care if that's pointer, remove it from
+											// type id
+											if _, ok := pkg.TypesInfo.Uses[caller].Type().(*types.Pointer); ok {
+												pkgPath = strings.TrimPrefix(pkgPath, "*")
+											}
 										}
 									}
 								}
 							}
 							funId := pkgPath + "." + pkg.TypesInfo.Uses[sel.Sel].Name()
+
 							fmt.Println("\t\t\tFuncCall via selector:", funId, pkg.TypesInfo.Uses[sel.Sel].Type().String(), " @called : ", fset.File(node.Pos()).Name())
 							fun := FuncDescriptor{funId, pkg.TypesInfo.Uses[sel.Sel].Type().String()}
 							if !Contains(backwardCallGraph[fun], currentFun) {
@@ -185,6 +191,11 @@ func BuildCallGraph(projectPath string, packagePattern string, funcDecls map[Fun
 										} else {
 											if pkg.TypesInfo.Defs[v.Names[0]] != nil {
 												pkgPath = pkg.TypesInfo.Defs[v.Names[0]].Type().String()
+												// We don't care if that's pointer, remove it from
+												// type id
+												if _, ok := pkg.TypesInfo.Defs[v.Names[0]].Type().(*types.Pointer); ok {
+													pkgPath = strings.TrimPrefix(pkgPath, "*")
+												}
 											}
 										}
 									}
@@ -237,6 +248,9 @@ func FindFuncDecls(projectPath string, packagePattern string) map[FuncDescriptor
 											} else {
 												if pkg.TypesInfo.Defs[v.Names[0]] != nil {
 													pkgPath = pkg.TypesInfo.Defs[v.Names[0]].Type().String()
+													if _, ok := pkg.TypesInfo.Defs[v.Names[0]].Type().(*types.Pointer); ok {
+														pkgPath = strings.TrimPrefix(pkgPath, "*")
+													}
 												}
 											}
 										}
