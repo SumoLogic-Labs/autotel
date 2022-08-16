@@ -249,6 +249,7 @@ func FindFuncDecls(projectPath string, packagePattern string) map[FuncDescriptor
 												if pkg.TypesInfo.Defs[v.Names[0]] != nil {
 													pkgPath = pkg.TypesInfo.Defs[v.Names[0]].Type().String()
 													if _, ok := pkg.TypesInfo.Defs[v.Names[0]].Type().(*types.Pointer); ok {
+														pkgPath = strings.TrimPrefix(pkgPath, "*")
 													}
 												}
 											}
