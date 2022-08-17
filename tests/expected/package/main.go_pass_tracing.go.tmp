@@ -15,8 +15,8 @@
 package main
 
 import (
-	"context"
 	"os"
+	"context"
 
 	"github.com/pdelewski/autotel/rtlib"
 	otel "go.opentelemetry.io/otel"
