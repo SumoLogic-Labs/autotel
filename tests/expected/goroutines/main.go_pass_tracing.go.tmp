@@ -15,14 +15,14 @@
 package main
 
 import (
-	"context"
 	"fmt"
+	"context"
 
 	"github.com/pdelewski/autotel/rtlib"
 	otel "go.opentelemetry.io/otel"
 )
 
-func foo(__tracing_ctx context.Context) {
+func foo() {
 	__child_tracing_ctx, span := otel.Tracer("foo").Start(__tracing_ctx, "foo")
 	_ = __child_tracing_ctx
 	defer span.End()
@@ -40,14 +40,14 @@ func main() {
 	rtlib.AutotelEntryPoint__()
 	messages := make(chan string)
 
-	go func(__tracing_ctx context.Context) {
+	go func() {
 		__child_tracing_ctx, span := otel.Tracer("anonymous").Start(__tracing_ctx, "anonymous")
 		_ = __child_tracing_ctx
 		defer span.End()
 		messages <- "ping"
-	}(__child_tracing_ctx)
+	}()
 
-	foo(__child_tracing_ctx)
+	foo()
 
 	msg := <-messages
 	fmt.Println(msg)
