@@ -33,6 +33,7 @@ var testcases = map[string]string{
 	"./tests/recursion":  "./tests/expected/recursion",
 	"./tests/interface":  "./tests/expected/interface",
 	"./tests/package":    "./tests/expected/package",
+	"./tests/selector":   "./tests/expected/selector",
 }
 
 var failures []string
