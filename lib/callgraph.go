@@ -80,23 +80,20 @@ func FindRootFunctions(projectPath string, packagePattern string) []FuncDescript
 	return rootFunctions
 }
 
-func GetMostInnerAstIdent(sel *ast.SelectorExpr) *ast.Ident {
+func GetMostInnerAstIdent(inSel *ast.SelectorExpr) *ast.Ident {
 	var l []*ast.Ident
-	for sel != nil {
-		l = append(l, sel.Sel)
-		if _, ok := sel.X.(*ast.SelectorExpr); ok {
-			sel = sel.X.(*ast.SelectorExpr)
-		} else if call, ok := sel.X.(*ast.CallExpr); ok {
-			id, ok := call.Fun.(*ast.Ident)
-			// TODO handle this case
-			if ok {
-				l = append(l, id)
-			}
+	var e ast.Expr
+	e = inSel
+	for e != nil {
+		if _, ok := e.(*ast.Ident); ok {
+			l = append(l, e.(*ast.Ident))
 			break
-		} else if _, ok := sel.X.(*ast.IndexExpr); ok {
+		} else if _, ok := e.(*ast.SelectorExpr); ok {
+			l = append(l, e.(*ast.SelectorExpr).Sel)
+			e = e.(*ast.SelectorExpr).X
+		} else if _, ok := e.(*ast.CallExpr); ok {
 			break
-		} else {
-			l = append(l, sel.X.(*ast.Ident))
+		} else if _, ok := e.(*ast.IndexExpr); ok {
 			break
 		}
 	}
