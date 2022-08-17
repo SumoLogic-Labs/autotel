@@ -97,10 +97,8 @@ func GetMostInnerAstIdent(inSel *ast.SelectorExpr) *ast.Ident {
 			e = e.(*ast.IndexExpr).X
 		}
 	}
-	// TODO this is related to callexpr case
-	// a.foo(1).bar(2)
 	if len(l) < 2 {
-		return nil
+		panic("selector list should have at least 2 elems")
 	}
 	// caller or receiver is always
 	// at position 1, function is at 0
