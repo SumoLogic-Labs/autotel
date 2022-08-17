@@ -80,24 +80,21 @@ func FindRootFunctions(projectPath string, packagePattern string) []FuncDescript
 	return rootFunctions
 }
 
-func GetMostInnerAstIdent(sel *ast.SelectorExpr) *ast.Ident {
+func GetMostInnerAstIdent(inSel *ast.SelectorExpr) *ast.Ident {
 	var l []*ast.Ident
-	for sel != nil {
-		l = append(l, sel.Sel)
-		if _, ok := sel.X.(*ast.SelectorExpr); ok {
-			sel = sel.X.(*ast.SelectorExpr)
-		} else if call, ok := sel.X.(*ast.CallExpr); ok {
-			id, ok := call.Fun.(*ast.Ident)
-			// TODO handle this case
-			if ok {
-				l = append(l, id)
-			}
+	var e ast.Expr
+	e = inSel
+	for e != nil {
+		if _, ok := e.(*ast.Ident); ok {
+			l = append(l, e.(*ast.Ident))
 			break
-		} else if _, ok := sel.X.(*ast.IndexExpr); ok {
-			break
-		} else {
-			l = append(l, sel.X.(*ast.Ident))
-			break
+		} else if _, ok := e.(*ast.SelectorExpr); ok {
+			l = append(l, e.(*ast.SelectorExpr).Sel)
+			e = e.(*ast.SelectorExpr).X
+		} else if _, ok := e.(*ast.CallExpr); ok {
+			e = e.(*ast.CallExpr).Fun
+		} else if _, ok := e.(*ast.IndexExpr); ok {
+			e = e.(*ast.IndexExpr).X
 		}
 	}
 	// TODO this is related to callexpr case
@@ -161,6 +158,11 @@ func BuildCallGraph(projectPath string, packagePattern string, funcDecls map[Fun
 											if _, ok := pkg.TypesInfo.Uses[caller].Type().(*types.Pointer); ok {
 												pkgPath = strings.TrimPrefix(pkgPath, "*")
 											}
+											// We don't care if called via index, remove it from
+											// type id
+											if _, ok := pkg.TypesInfo.Uses[caller].Type().(*types.Slice); ok {
+												pkgPath = strings.TrimPrefix(pkgPath, "[]")
+											}
 										}
 									}
 								}
@@ -184,17 +186,22 @@ func BuildCallGraph(projectPath string, packagePattern string, funcDecls map[Fun
 								for _, defs := range dependentpkg.TypesInfo.Defs {
 									if defs != nil {
 										if _, ok := defs.Type().Underlying().(*types.Interface); ok {
-											if types.Implements(pkg.TypesInfo.Defs[v.Names[0]].Type(), defs.Type().Underlying().(*types.Interface)) {
+											if len(v.Names) > 0 && types.Implements(pkg.TypesInfo.Defs[v.Names[0]].Type(), defs.Type().Underlying().(*types.Interface)) {
 												pkgPath = defs.Type().String()
 												break
 											}
 										} else {
-											if pkg.TypesInfo.Defs[v.Names[0]] != nil {
+											if len(v.Names) > 0 && pkg.TypesInfo.Defs[v.Names[0]] != nil {
 												pkgPath = pkg.TypesInfo.Defs[v.Names[0]].Type().String()
 												// We don't care if that's pointer, remove it from
 												// type id
 												if _, ok := pkg.TypesInfo.Defs[v.Names[0]].Type().(*types.Pointer); ok {
 													pkgPath = strings.TrimPrefix(pkgPath, "*")
+												}
+												// We don't care if called via index, remove it from
+												// type id
+												if _, ok := pkg.TypesInfo.Defs[v.Names[0]].Type().(*types.Slice); ok {
+													pkgPath = strings.TrimPrefix(pkgPath, "[]")
 												}
 											}
 										}
@@ -243,13 +250,19 @@ func FindFuncDecls(projectPath string, packagePattern string) map[FuncDescriptor
 								for _, defs := range dependentpkg.TypesInfo.Defs {
 									if defs != nil {
 										if _, ok := defs.Type().Underlying().(*types.Interface); ok {
-											if types.Implements(pkg.TypesInfo.Defs[v.Names[0]].Type(), defs.Type().Underlying().(*types.Interface)) {
+
+											if len(v.Names) > 0 && types.Implements(pkg.TypesInfo.Defs[v.Names[0]].Type(), defs.Type().Underlying().(*types.Interface)) {
 												pkgPath = defs.Type().String()
 											} else {
-												if pkg.TypesInfo.Defs[v.Names[0]] != nil {
+												if len(v.Names) > 0 && pkg.TypesInfo.Defs[v.Names[0]] != nil {
 													pkgPath = pkg.TypesInfo.Defs[v.Names[0]].Type().String()
 													if _, ok := pkg.TypesInfo.Defs[v.Names[0]].Type().(*types.Pointer); ok {
 														pkgPath = strings.TrimPrefix(pkgPath, "*")
+													}
+													// We don't care if called via index, remove it from
+													// type id
+													if _, ok := pkg.TypesInfo.Defs[v.Names[0]].Type().(*types.Slice); ok {
+														pkgPath = strings.TrimPrefix(pkgPath, "[]")
 													}
 												}
 											}
