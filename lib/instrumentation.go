@@ -19,10 +19,8 @@ import (
 	"go/ast"
 	"go/printer"
 	"go/token"
-	"go/types"
 	"log"
 	"os"
-	"strings"
 
 	"golang.org/x/tools/go/ast/astutil"
 	"golang.org/x/tools/go/packages"
@@ -104,34 +102,7 @@ func Instrument(projectPath string,
 					pkgPath := ""
 
 					if x.Recv != nil {
-						for _, v := range x.Recv.List {
-							for _, dependentpkg := range pkgs {
-								for _, defs := range dependentpkg.TypesInfo.Defs {
-									if defs != nil {
-										if _, ok := defs.Type().Underlying().(*types.Interface); ok {
-											if len(v.Names) > 0 && types.Implements(pkg.TypesInfo.Defs[v.Names[0]].Type(), defs.Type().Underlying().(*types.Interface)) {
-												pkgPath = defs.Type().String()
-												break
-											}
-										} else {
-											if len(v.Names) > 0 && pkg.TypesInfo.Defs[v.Names[0]] != nil {
-												pkgPath = pkg.TypesInfo.Defs[v.Names[0]].Type().String()
-												// We don't care if that's pointer, remove it from
-												// type id
-												if _, ok := pkg.TypesInfo.Defs[v.Names[0]].Type().(*types.Pointer); ok {
-													pkgPath = strings.TrimPrefix(pkgPath, "*")
-												}
-												// We don't care if called via index, remove it from
-												// type id
-												if _, ok := pkg.TypesInfo.Defs[v.Names[0]].Type().(*types.Slice); ok {
-													pkgPath = strings.TrimPrefix(pkgPath, "[]")
-												}
-											}
-										}
-									}
-								}
-							}
-						}
+						pkgPath = GetPackagePathHashFromFunc(pkg, pkgs, x)
 					} else {
 						if pkg.TypesInfo.Defs[x.Name].Pkg() != nil {
 							pkgPath = pkg.TypesInfo.Defs[x.Name].Pkg().Path()

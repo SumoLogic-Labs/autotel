@@ -197,45 +197,11 @@ func PropagateContext(projectPath string,
 
 				switch x := n.(type) {
 				case *ast.FuncDecl:
-					// inject context only
-					// functions available in the call graph
-					// _, exists := callgraph[x.Name.Name]
-					// if !exists {
-					// 	return false
-					// }
-					// TODO this is not optimap o(n)
 					exists := false
 					pkgPath := ""
 
 					if x.Recv != nil {
-						for _, v := range x.Recv.List {
-							for _, dependentpkg := range pkgs {
-								for _, defs := range dependentpkg.TypesInfo.Defs {
-									if defs != nil {
-										if _, ok := defs.Type().Underlying().(*types.Interface); ok {
-											if len(v.Names) > 0 && types.Implements(pkg.TypesInfo.Defs[v.Names[0]].Type(), defs.Type().Underlying().(*types.Interface)) {
-												pkgPath = defs.Type().String()
-												break
-											}
-										} else {
-											if len(v.Names) > 0 && pkg.TypesInfo.Defs[v.Names[0]] != nil {
-												pkgPath = pkg.TypesInfo.Defs[v.Names[0]].Type().String()
-												// We don't care if that's pointer, remove it from
-												// type id
-												if _, ok := pkg.TypesInfo.Defs[v.Names[0]].Type().(*types.Pointer); ok {
-													pkgPath = strings.TrimPrefix(pkgPath, "*")
-												}
-												// We don't care if called via index, remove it from
-												// type id
-												if _, ok := pkg.TypesInfo.Defs[v.Names[0]].Type().(*types.Slice); ok {
-													pkgPath = strings.TrimPrefix(pkgPath, "[]")
-												}
-											}
-										}
-									}
-								}
-							}
-						}
+						pkgPath = GetPackagePathHashFromFunc(pkg, pkgs, x)
 					} else {
 						if pkg.TypesInfo.Defs[x.Name].Pkg() != nil {
 							pkgPath = pkg.TypesInfo.Defs[x.Name].Pkg().Path()
@@ -246,6 +212,13 @@ func PropagateContext(projectPath string,
 					fun := FuncDescriptor{funId,
 						pkg.TypesInfo.Defs[x.Name].Type().String()}
 
+					// inject context only
+					// functions available in the call graph
+					// _, exists := callgraph[x.Name.Name]
+					// if !exists {
+					// 	return false
+					// }
+					// TODO this is not optimap o(n)
 					for k, v := range callgraph {
 						if k.TypeHash() == fun.TypeHash() {
 							exists = true
@@ -256,11 +229,9 @@ func PropagateContext(projectPath string,
 							}
 						}
 					}
-					//fmt.Println("before exits", fun)
 					if !exists {
 						break
 					}
-					//fmt.Println("before contains")
 					if Contains(rootFunctions, fun) {
 						break
 					}
@@ -288,9 +259,6 @@ func PropagateContext(projectPath string,
 						addImports = true
 						x.Args = append([]ast.Expr{ctxArg}, x.Args...)
 					}
-					// TODO selectors are recursive
-					// a.b.c.fun()
-					// check whether the most outer one is package
 					sel, ok := x.Fun.(*ast.SelectorExpr)
 
 					if ok {

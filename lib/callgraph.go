@@ -105,6 +105,40 @@ func GetMostInnerAstIdent(inSel *ast.SelectorExpr) *ast.Ident {
 	return l[1]
 }
 
+func GetPackagePathHashFromFunc(pkg *packages.Package, pkgs []*packages.Package, x *ast.FuncDecl) string {
+	pkgPath := ""
+	for _, v := range x.Recv.List {
+		for _, dependentpkg := range pkgs {
+			for _, defs := range dependentpkg.TypesInfo.Defs {
+				if defs != nil {
+					if _, ok := defs.Type().Underlying().(*types.Interface); ok {
+						if len(v.Names) > 0 &&
+							types.Implements(pkg.TypesInfo.Defs[v.Names[0]].Type(), defs.Type().Underlying().(*types.Interface)) {
+							pkgPath = defs.Type().String()
+							break
+						} else {
+							if len(v.Names) > 0 && pkg.TypesInfo.Defs[v.Names[0]] != nil {
+								pkgPath = pkg.TypesInfo.Defs[v.Names[0]].Type().String()
+								// We don't care if that's pointer, remove it from
+								// type id
+								if _, ok := pkg.TypesInfo.Defs[v.Names[0]].Type().(*types.Pointer); ok {
+									pkgPath = strings.TrimPrefix(pkgPath, "*")
+								}
+								// We don't care if called via index, remove it from
+								// type id
+								if _, ok := pkg.TypesInfo.Defs[v.Names[0]].Type().(*types.Slice); ok {
+									pkgPath = strings.TrimPrefix(pkgPath, "[]")
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	return pkgPath
+}
+
 func BuildCallGraph(projectPath string, packagePattern string, funcDecls map[FuncDescriptor]bool) map[FuncDescriptor][]FuncDescriptor {
 	fset := token.NewFileSet()
 	cfg := &packages.Config{Fset: fset, Mode: mode, Dir: projectPath}
@@ -179,34 +213,7 @@ func BuildCallGraph(projectPath string, packagePattern string, funcDecls map[Fun
 				case *ast.FuncDecl:
 					pkgPath := ""
 					if x.Recv != nil {
-						for _, v := range x.Recv.List {
-							for _, dependentpkg := range pkgs {
-								for _, defs := range dependentpkg.TypesInfo.Defs {
-									if defs != nil {
-										if _, ok := defs.Type().Underlying().(*types.Interface); ok {
-											if len(v.Names) > 0 && types.Implements(pkg.TypesInfo.Defs[v.Names[0]].Type(), defs.Type().Underlying().(*types.Interface)) {
-												pkgPath = defs.Type().String()
-												break
-											}
-										} else {
-											if len(v.Names) > 0 && pkg.TypesInfo.Defs[v.Names[0]] != nil {
-												pkgPath = pkg.TypesInfo.Defs[v.Names[0]].Type().String()
-												// We don't care if that's pointer, remove it from
-												// type id
-												if _, ok := pkg.TypesInfo.Defs[v.Names[0]].Type().(*types.Pointer); ok {
-													pkgPath = strings.TrimPrefix(pkgPath, "*")
-												}
-												// We don't care if called via index, remove it from
-												// type id
-												if _, ok := pkg.TypesInfo.Defs[v.Names[0]].Type().(*types.Slice); ok {
-													pkgPath = strings.TrimPrefix(pkgPath, "[]")
-												}
-											}
-										}
-									}
-								}
-							}
-						}
+						pkgPath = GetPackagePathHashFromFunc(pkg, pkgs, x)
 					} else {
 						if pkg.TypesInfo.Defs[x.Name].Pkg() != nil {
 							pkgPath = pkg.TypesInfo.Defs[x.Name].Pkg().Path()
@@ -241,34 +248,8 @@ func FindFuncDecls(projectPath string, packagePattern string) map[FuncDescriptor
 				switch x := n.(type) {
 				case *ast.FuncDecl:
 					pkgPath := ""
-
 					if x.Recv != nil {
-						for _, v := range x.Recv.List {
-							for _, dependentpkg := range pkgs {
-								for _, defs := range dependentpkg.TypesInfo.Defs {
-									if defs != nil {
-										if _, ok := defs.Type().Underlying().(*types.Interface); ok {
-
-											if len(v.Names) > 0 && types.Implements(pkg.TypesInfo.Defs[v.Names[0]].Type(), defs.Type().Underlying().(*types.Interface)) {
-												pkgPath = defs.Type().String()
-											} else {
-												if len(v.Names) > 0 && pkg.TypesInfo.Defs[v.Names[0]] != nil {
-													pkgPath = pkg.TypesInfo.Defs[v.Names[0]].Type().String()
-													if _, ok := pkg.TypesInfo.Defs[v.Names[0]].Type().(*types.Pointer); ok {
-														pkgPath = strings.TrimPrefix(pkgPath, "*")
-													}
-													// We don't care if called via index, remove it from
-													// type id
-													if _, ok := pkg.TypesInfo.Defs[v.Names[0]].Type().(*types.Slice); ok {
-														pkgPath = strings.TrimPrefix(pkgPath, "[]")
-													}
-												}
-											}
-										}
-									}
-								}
-							}
-						}
+						pkgPath = GetPackagePathHashFromFunc(pkg, pkgs, x)
 					} else {
 						if pkg.TypesInfo.Defs[x.Name].Pkg() != nil {
 							pkgPath = pkg.TypesInfo.Defs[x.Name].Pkg().Path()
