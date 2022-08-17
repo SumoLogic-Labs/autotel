@@ -31,6 +31,8 @@ var testcases = map[string]string{
 	"./tests/methods":    "./tests/expected/methods",
 	"./tests/goroutines": "./tests/expected/goroutines",
 	"./tests/recursion":  "./tests/expected/recursion",
+	"./tests/interface":  "./tests/expected/interface",
+	"./tests/package":    "./tests/expected/package",
 }
 
 var failures []string
