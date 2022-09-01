@@ -140,7 +140,34 @@ func GetPackagePathHashFromFunc(pkg *packages.Package, pkgs []*packages.Package,
 	return pkgPath
 }
 
-func BuildCallGraph(projectPath string, packagePattern string, funcDecls map[FuncDescriptor]bool) map[FuncDescriptor][]FuncDescriptor {
+func GetSelectorPkgPath(sel *ast.SelectorExpr, pkg *packages.Package) string {
+	var pkgPath string
+	caller := GetMostInnerAstIdent(sel)
+	if caller != nil {
+		if pkg.TypesInfo.Uses[caller] != nil {
+			if !strings.Contains(pkg.TypesInfo.Uses[caller].Type().String(), "invalid") {
+				pkgPath = pkg.TypesInfo.Uses[caller].Type().String()
+				// We don't care if that's pointer, remove it from
+				// type id
+				if _, ok := pkg.TypesInfo.Uses[caller].Type().(*types.Pointer); ok {
+					pkgPath = strings.TrimPrefix(pkgPath, "*")
+				}
+				// We don't care if called via index, remove it from
+				// type id
+				if _, ok := pkg.TypesInfo.Uses[caller].Type().(*types.Slice); ok {
+					pkgPath = strings.TrimPrefix(pkgPath, "[]")
+				}
+			}
+		}
+	}
+	return pkgPath
+}
+
+func BuildCallGraph(
+	projectPath string,
+	packagePattern string,
+	funcDecls map[FuncDescriptor]bool) map[FuncDescriptor][]FuncDescriptor {
+
 	fset := token.NewFileSet()
 	cfg := &packages.Config{Fset: fset, Mode: mode, Dir: projectPath}
 	pkgs, err := packages.Load(cfg, packagePattern)
@@ -181,24 +208,7 @@ func BuildCallGraph(projectPath string, packagePattern string, funcDecls map[Fun
 								pkgPath = pkg.TypesInfo.Uses[sel.Sel].Pkg().Path()
 							}
 							if sel.X != nil {
-								caller := GetMostInnerAstIdent(sel)
-								if caller != nil {
-									if pkg.TypesInfo.Uses[caller] != nil {
-										if !strings.Contains(pkg.TypesInfo.Uses[caller].Type().String(), "invalid") {
-											pkgPath = pkg.TypesInfo.Uses[caller].Type().String()
-											// We don't care if that's pointer, remove it from
-											// type id
-											if _, ok := pkg.TypesInfo.Uses[caller].Type().(*types.Pointer); ok {
-												pkgPath = strings.TrimPrefix(pkgPath, "*")
-											}
-											// We don't care if called via index, remove it from
-											// type id
-											if _, ok := pkg.TypesInfo.Uses[caller].Type().(*types.Slice); ok {
-												pkgPath = strings.TrimPrefix(pkgPath, "[]")
-											}
-										}
-									}
-								}
+								pkgPath = GetSelectorPkgPath(sel, pkg)
 							}
 							funId := pkgPath + "." + pkg.TypesInfo.Uses[sel.Sel].Name()
 

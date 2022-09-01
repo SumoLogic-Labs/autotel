@@ -19,10 +19,8 @@ import (
 	"go/ast"
 	"go/printer"
 	"go/token"
-	"go/types"
 	"log"
 	"os"
-	"strings"
 
 	"golang.org/x/tools/go/ast/astutil"
 	"golang.org/x/tools/go/packages"
@@ -119,26 +117,7 @@ func PropagateContext(projectPath string,
 							pkgPath = pkg.TypesInfo.Uses[sel.Sel].Pkg().Path()
 						}
 						if sel.X != nil {
-							if sel.X != nil {
-								caller := GetMostInnerAstIdent(sel)
-								if caller != nil {
-									if pkg.TypesInfo.Uses[caller] != nil {
-										if !strings.Contains(pkg.TypesInfo.Uses[caller].Type().String(), "invalid") {
-											pkgPath = pkg.TypesInfo.Uses[caller].Type().String()
-											// We don't care if that's pointer, remove it from
-											// type id
-											if _, ok := pkg.TypesInfo.Uses[caller].Type().(*types.Pointer); ok {
-												pkgPath = strings.TrimPrefix(pkgPath, "*")
-											}
-											// We don't care if called via index, remove it from
-											// type id
-											if _, ok := pkg.TypesInfo.Uses[caller].Type().(*types.Slice); ok {
-												pkgPath = strings.TrimPrefix(pkgPath, "[]")
-											}
-										}
-									}
-								}
-							}
+							pkgPath = GetSelectorPkgPath(sel, pkg)
 						}
 						funId := pkgPath + "." + pkg.TypesInfo.Uses[sel.Sel].Name()
 						fun := FuncDescriptor{funId,
