@@ -65,6 +65,29 @@ func PropagateContext(projectPath string,
 			// instead of functiondecl
 			currentFun := "nil"
 
+			emitEmptyContext := func(x *ast.CallExpr, fun FuncDescriptor, ctxArg *ast.Ident) {
+				visited := map[FuncDescriptor]bool{}
+				if isPath(callgraph, fun, rootFunctions[0], visited) {
+					addImports = true
+					if currentFun != "nil" {
+						x.Args = append([]ast.Expr{ctxArg}, x.Args...)
+					} else {
+						contextTodo := &ast.CallExpr{
+							Fun: &ast.SelectorExpr{
+								X: &ast.Ident{
+									Name: "context",
+								},
+								Sel: &ast.Ident{
+									Name: "TODO",
+								},
+							},
+							Lparen:   62,
+							Ellipsis: 0,
+						}
+						x.Args = append([]ast.Expr{contextTodo}, x.Args...)
+					}
+				}
+			}
 			emitCallExpr := func(ident *ast.Ident, n ast.Node, ctxArg *ast.Ident) {
 				switch x := n.(type) {
 				case *ast.CallExpr:
@@ -82,27 +105,7 @@ func PropagateContext(projectPath string,
 						// exists
 
 						if found {
-							visited := map[FuncDescriptor]bool{}
-							if isPath(callgraph, fun, rootFunctions[0], visited) {
-								addImports = true
-								if currentFun != "nil" {
-									x.Args = append([]ast.Expr{ctxArg}, x.Args...)
-								} else {
-									contextTodo := &ast.CallExpr{
-										Fun: &ast.SelectorExpr{
-											X: &ast.Ident{
-												Name: "context",
-											},
-											Sel: &ast.Ident{
-												Name: "TODO",
-											},
-										},
-										Lparen:   62,
-										Ellipsis: 0,
-									}
-									x.Args = append([]ast.Expr{contextTodo}, x.Args...)
-								}
-							}
+							emitEmptyContext(x, fun, ctxArg)
 						}
 					}
 				}
@@ -129,27 +132,7 @@ func PropagateContext(projectPath string,
 						// exists
 
 						if found {
-							visited := map[FuncDescriptor]bool{}
-							if isPath(callgraph, fun, rootFunctions[0], visited) {
-								addImports = true
-								if currentFun != "nil" {
-									x.Args = append([]ast.Expr{ctxArg}, x.Args...)
-								} else {
-									contextTodo := &ast.CallExpr{
-										Fun: &ast.SelectorExpr{
-											X: &ast.Ident{
-												Name: "context",
-											},
-											Sel: &ast.Ident{
-												Name: "TODO",
-											},
-										},
-										Lparen:   62,
-										Ellipsis: 0,
-									}
-									x.Args = append([]ast.Expr{contextTodo}, x.Args...)
-								}
-							}
+							emitEmptyContext(x, fun, ctxArg)
 						}
 					}
 				}
