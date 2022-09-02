@@ -176,7 +176,6 @@ func PropagateContext(projectPath string,
 
 				switch x := n.(type) {
 				case *ast.FuncDecl:
-					exists := false
 					pkgPath := ""
 
 					if x.Recv != nil {
@@ -187,17 +186,15 @@ func PropagateContext(projectPath string,
 						}
 					}
 					funId := pkgPath + "." + pkg.TypesInfo.Defs[x.Name].Name()
-					currentFun = funId
 					fun := FuncDescriptor{funId,
 						pkg.TypesInfo.Defs[x.Name].Type().String()}
-
+					currentFun = funId
 					// inject context only
 					// functions available in the call graph
-					exists = isFunPartOfCallGraph(fun, callgraph)
-
-					if !exists {
+					if !isFunPartOfCallGraph(fun, callgraph) {
 						break
 					}
+
 					if Contains(rootFunctions, fun) {
 						break
 					}
@@ -208,9 +205,7 @@ func PropagateContext(projectPath string,
 						x.Type.Params.List = append([]*ast.Field{ctxField}, x.Type.Params.List...)
 					}
 				case *ast.CallExpr:
-					ident, ok := x.Fun.(*ast.Ident)
-
-					if ok {
+					if ident, ok := x.Fun.(*ast.Ident); ok {
 						pkgPath := ""
 						if pkg.TypesInfo.Uses[ident].Pkg() != nil {
 							pkgPath = pkg.TypesInfo.Uses[ident].Pkg().Path()
@@ -220,16 +215,15 @@ func PropagateContext(projectPath string,
 
 						emitCallExpr(ident, n, ctxArg)
 					}
-					_, ok = x.Fun.(*ast.FuncLit)
-					if ok {
+
+					if _, ok := x.Fun.(*ast.FuncLit); ok {
 						addImports = true
 						x.Args = append([]ast.Expr{ctxArg}, x.Args...)
 					}
-					sel, ok := x.Fun.(*ast.SelectorExpr)
-
-					if ok {
+					if sel, ok := x.Fun.(*ast.SelectorExpr); ok {
 						emitCallExprFromSelector(sel, n, ctxArg)
 					}
+
 				case *ast.FuncLit:
 					addImports = true
 					x.Type.Params.List = append([]*ast.Field{ctxField}, x.Type.Params.List...)
