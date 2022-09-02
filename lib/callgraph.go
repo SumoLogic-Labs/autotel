@@ -95,6 +95,9 @@ func GetMostInnerAstIdent(inSel *ast.SelectorExpr) *ast.Ident {
 			e = e.(*ast.CallExpr).Fun
 		} else if _, ok := e.(*ast.IndexExpr); ok {
 			e = e.(*ast.IndexExpr).X
+		} else {
+			// TODO this is uncaught expression
+			break
 		}
 	}
 	if len(l) < 2 {
