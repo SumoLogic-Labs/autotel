@@ -26,6 +26,21 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
+func isFunPartOfCallGraph(fun FuncDescriptor, callgraph map[FuncDescriptor][]FuncDescriptor) bool {
+	// TODO this is not optimap o(n)
+	for k, v := range callgraph {
+		if k.TypeHash() == fun.TypeHash() {
+			return true
+		}
+		for _, e := range v {
+			if fun.TypeHash() == e.TypeHash() {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func PropagateContext(projectPath string,
 	packagePattern string,
 	callgraph map[FuncDescriptor][]FuncDescriptor,
@@ -71,43 +86,45 @@ func PropagateContext(projectPath string,
 					addImports = true
 					if currentFun != "nil" {
 						x.Args = append([]ast.Expr{ctxArg}, x.Args...)
-					} else {
-						contextTodo := &ast.CallExpr{
-							Fun: &ast.SelectorExpr{
-								X: &ast.Ident{
-									Name: "context",
-								},
-								Sel: &ast.Ident{
-									Name: "TODO",
-								},
-							},
-							Lparen:   62,
-							Ellipsis: 0,
-						}
-						x.Args = append([]ast.Expr{contextTodo}, x.Args...)
+						return
 					}
+					contextTodo := &ast.CallExpr{
+						Fun: &ast.SelectorExpr{
+							X: &ast.Ident{
+								Name: "context",
+							},
+							Sel: &ast.Ident{
+								Name: "TODO",
+							},
+						},
+						Lparen:   62,
+						Ellipsis: 0,
+					}
+					x.Args = append([]ast.Expr{contextTodo}, x.Args...)
 				}
 			}
 			emitCallExpr := func(ident *ast.Ident, n ast.Node, ctxArg *ast.Ident) {
 				switch x := n.(type) {
 				case *ast.CallExpr:
-					if pkg.TypesInfo.Uses[ident] != nil {
-						pkgPath := ""
-						if pkg.TypesInfo.Uses[ident].Pkg() != nil {
-							pkgPath = pkg.TypesInfo.Uses[ident].Pkg().Path()
-						}
-						funId := pkgPath + "." + pkg.TypesInfo.Uses[ident].Name()
-						fun := FuncDescriptor{funId,
-							pkg.TypesInfo.Uses[ident].Type().String()}
-						found := funcDecls[fun]
-						// inject context parameter only
-						// to these functions for which function decl
-						// exists
-
-						if found {
-							emitEmptyContext(x, fun, ctxArg)
-						}
+					if pkg.TypesInfo.Uses[ident] == nil {
+						return
 					}
+					pkgPath := ""
+					if pkg.TypesInfo.Uses[ident].Pkg() != nil {
+						pkgPath = pkg.TypesInfo.Uses[ident].Pkg().Path()
+					}
+					funId := pkgPath + "." + pkg.TypesInfo.Uses[ident].Name()
+					fun := FuncDescriptor{funId,
+						pkg.TypesInfo.Uses[ident].Type().String()}
+					found := funcDecls[fun]
+					// inject context parameter only
+					// to these functions for which function decl
+					// exists
+
+					if found {
+						emitEmptyContext(x, fun, ctxArg)
+					}
+
 				}
 			}
 			emitCallExprFromSelector := func(sel *ast.SelectorExpr, n ast.Node, ctxArg *ast.Ident) {
@@ -176,21 +193,8 @@ func PropagateContext(projectPath string,
 
 					// inject context only
 					// functions available in the call graph
-					// _, exists := callgraph[x.Name.Name]
-					// if !exists {
-					// 	return false
-					// }
-					// TODO this is not optimap o(n)
-					for k, v := range callgraph {
-						if k.TypeHash() == fun.TypeHash() {
-							exists = true
-						}
-						for _, e := range v {
-							if fun.TypeHash() == e.TypeHash() {
-								exists = true
-							}
-						}
-					}
+					exists = isFunPartOfCallGraph(fun, callgraph)
+
 					if !exists {
 						break
 					}
@@ -234,21 +238,22 @@ func PropagateContext(projectPath string,
 					iname := x.Name
 					if iface, ok := x.Type.(*ast.InterfaceType); ok {
 						for _, method := range iface.Methods.List {
-							if funcType, ok := method.Type.(*ast.FuncType); ok {
-								visited := map[FuncDescriptor]bool{}
-								pkgPath := ""
-								if pkg.TypesInfo.Defs[method.Names[0]].Pkg() != nil {
-									pkgPath = pkg.TypesInfo.Defs[method.Names[0]].Pkg().Path()
-								}
-								funId := pkgPath + "." + iname.Name + "." + pkg.TypesInfo.Defs[method.Names[0]].Name()
-								fun := FuncDescriptor{funId,
-									pkg.TypesInfo.Defs[method.Names[0]].Type().String()}
-								fmt.Println("\t\t\tInterfaceType", fun.Id, fun.DeclType)
-								if isPath(callgraph, fun, rootFunctions[0], visited) {
-									addImports = true
-									funcType.Params.List = append([]*ast.Field{ctxField}, funcType.Params.List...)
-								}
-
+							funcType, ok := method.Type.(*ast.FuncType)
+							if !ok {
+								return true
+							}
+							visited := map[FuncDescriptor]bool{}
+							pkgPath := ""
+							if pkg.TypesInfo.Defs[method.Names[0]].Pkg() != nil {
+								pkgPath = pkg.TypesInfo.Defs[method.Names[0]].Pkg().Path()
+							}
+							funId := pkgPath + "." + iname.Name + "." + pkg.TypesInfo.Defs[method.Names[0]].Name()
+							fun := FuncDescriptor{funId,
+								pkg.TypesInfo.Defs[method.Names[0]].Type().String()}
+							fmt.Println("\t\t\tInterfaceType", fun.Id, fun.DeclType)
+							if isPath(callgraph, fun, rootFunctions[0], visited) {
+								addImports = true
+								funcType.Params.List = append([]*ast.Field{ctxField}, funcType.Params.List...)
 							}
 						}
 					}
