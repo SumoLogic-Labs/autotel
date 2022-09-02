@@ -112,7 +112,7 @@ func GetPackagePathHashFromFunc(pkg *packages.Package, pkgs []*packages.Package,
 			for _, defs := range dependentpkg.TypesInfo.Defs {
 				if defs != nil {
 					if _, ok := defs.Type().Underlying().(*types.Interface); ok {
-						if len(v.Names) < 0 || pkg.TypesInfo.Defs[v.Names[0]] == nil {
+						if len(v.Names) == 0 || pkg.TypesInfo.Defs[v.Names[0]] == nil {
 							continue
 						}
 						funType := pkg.TypesInfo.Defs[v.Names[0]].Type()
