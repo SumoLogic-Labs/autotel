@@ -140,8 +140,7 @@ func GetPackagePathHashFromFunc(pkg *packages.Package, pkgs []*packages.Package,
 	return pkgPath
 }
 
-func GetSelectorPkgPath(sel *ast.SelectorExpr, pkg *packages.Package) string {
-	var pkgPath string
+func GetSelectorPkgPath(sel *ast.SelectorExpr, pkg *packages.Package, pkgPath string) string {
 	caller := GetMostInnerAstIdent(sel)
 	if caller != nil {
 		if pkg.TypesInfo.Uses[caller] != nil {
@@ -216,7 +215,7 @@ func BuildCallGraph(
 						if pkg.TypesInfo.Uses[sel.Sel] != nil {
 							pkgPath := GetPkgNameFromUsesTable(pkg, sel.Sel)
 							if sel.X != nil {
-								pkgPath = GetSelectorPkgPath(sel, pkg)
+								pkgPath = GetSelectorPkgPath(sel, pkg, pkgPath)
 							}
 							funId := pkgPath + "." + pkg.TypesInfo.Uses[sel.Sel].Name()
 							fmt.Println("\t\t\tFuncCall via selector:", funId, pkg.TypesInfo.Uses[sel.Sel].Type().String(),

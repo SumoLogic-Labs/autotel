@@ -132,7 +132,7 @@ func PropagateContext(projectPath string,
 					}
 					pkgPath := GetPkgNameFromUsesTable(pkg, sel.Sel)
 					if sel.X != nil {
-						pkgPath = GetSelectorPkgPath(sel, pkg)
+						pkgPath = GetSelectorPkgPath(sel, pkg, pkgPath)
 					}
 					funId := pkgPath + "." + pkg.TypesInfo.Uses[sel.Sel].Name()
 					fun := FuncDescriptor{funId,
