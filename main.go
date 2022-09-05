@@ -72,7 +72,7 @@ func injectAndDumpIr(root string, packagePattern string) {
 }
 
 // Parsing algorithm works as follows. It goes through all function
-// decls and infer function bodies to find call to SumoAutoInstrument
+// decls and infer function bodies to find call to AutotelEntryPoint__
 // A parent function of this call will become root of instrumentation
 // Each function call from this place will be instrumented automatically
 
