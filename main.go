@@ -174,7 +174,7 @@ func executeCommand(arglist []string) {
 func repl() {
 	replUsage()
 	for {
-		fmt.Println("enter command :> ")
+		fmt.Println("\nenter command :> ")
 		scanner := bufio.NewScanner(os.Stdin)
 		scanner.Scan()
 		args := scanner.Text()
@@ -186,6 +186,7 @@ func repl() {
 		}
 		if len(cmd) < 4 {
 			replUsage()
+			continue
 		}
 		executeCommand(cmd)
 	}
