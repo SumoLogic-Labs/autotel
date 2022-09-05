@@ -33,6 +33,20 @@ func usage() {
 	fmt.Println("\t\tgencfg                                 (generates json representation of control flow graph)")
 	fmt.Println("\t\trootfunctions                          (dumps root functions)")
 	fmt.Println("\t\trevert                                 (delete generated files)")
+	fmt.Println("\t\trepl                                   (interactive mode)")
+}
+
+func replUsage() {
+	fmt.Println("\tcommand:")
+	fmt.Println("\t\tinject                                 (injects open telemetry calls into project code)")
+	fmt.Println("\t\tinject-dump-ir                         (injects open telemetry calls into project code and intermediate passes)")
+	fmt.Println("\t\tinject-using-graph graph-file          (injects open telemetry calls into project code using provided graph information)")
+	fmt.Println("\t\tdumpcfg                                (dumps control flow graph)")
+	fmt.Println("\t\tgencfg                                 (generates json representation of control flow graph)")
+	fmt.Println("\t\trootfunctions                          (dumps root functions)")
+	fmt.Println("\t\trevert                                 (delete generated files)")
+	fmt.Println("\t\texit                                   (exit from interactive mode)")
+
 }
 
 func inject(root string, packagePattern string) {
@@ -76,27 +90,21 @@ func injectAndDumpIr(root string, packagePattern string) {
 // A parent function of this call will become root of instrumentation
 // Each function call from this place will be instrumented automatically
 
-func main() {
-	fmt.Println("autotel compiler")
-	args := len(os.Args)
-	if args < 4 {
-		usage()
-		return
-	}
-	if os.Args[1] == "--inject" {
-		projectPath := os.Args[2]
-		packagePattern := os.Args[3]
+func executeCommand(arglist []string) {
+	if arglist[1] == "--inject" {
+		projectPath := arglist[2]
+		packagePattern := arglist[3]
 		inject(projectPath, packagePattern)
 		fmt.Println("\tinstrumentation done")
 	}
-	if os.Args[1] == "--inject-dump-ir" {
-		projectPath := os.Args[2]
-		packagePattern := os.Args[3]
+	if arglist[1] == "--inject-dump-ir" {
+		projectPath := arglist[2]
+		packagePattern := arglist[3]
 		injectAndDumpIr(projectPath, packagePattern)
 		fmt.Println("\tinstrumentation done")
 	}
-	if os.Args[1] == "--inject-using-graph" {
-		graphFile := os.Args[2]
+	if arglist[1] == "--inject-using-graph" {
+		graphFile := arglist[2]
 		file, err := os.Open(graphFile)
 		if err != nil {
 			usage()
@@ -121,16 +129,16 @@ func main() {
 		for _, v := range rootFunctions {
 			fmt.Println("\nroot:" + v.TypeHash())
 		}
-		projectPath := os.Args[3]
-		packagePattern := os.Args[4]
+		projectPath := arglist[3]
+		packagePattern := arglist[4]
 
 		funcDecls := alib.FindFuncDecls(projectPath, packagePattern)
 
 		alib.ExecutePasses(projectPath, packagePattern, rootFunctions, funcDecls, backwardCallGraph)
 	}
-	if os.Args[1] == "--dumpcfg" {
-		projectPath := os.Args[2]
-		packagePattern := os.Args[3]
+	if arglist[1] == "--dumpcfg" {
+		projectPath := arglist[2]
+		packagePattern := arglist[3]
 		funcDecls := alib.FindFuncDecls(projectPath, packagePattern)
 		backwardCallGraph := alib.BuildCallGraph(projectPath, packagePattern, funcDecls)
 
@@ -140,16 +148,16 @@ func main() {
 			fmt.Print(" ", v)
 		}
 	}
-	if os.Args[1] == "--gencfg" {
-		projectPath := os.Args[2]
-		packagePattern := os.Args[3]
+	if arglist[1] == "--gencfg" {
+		projectPath := arglist[2]
+		packagePattern := arglist[3]
 		funcDecls := alib.FindFuncDecls(projectPath, packagePattern)
 		backwardCallGraph := alib.BuildCallGraph(projectPath, packagePattern, funcDecls)
 		alib.Generatecfg(backwardCallGraph, "callgraph.js")
 	}
-	if os.Args[1] == "--rootfunctions" {
-		projectPath := os.Args[2]
-		packagePattern := os.Args[3]
+	if arglist[1] == "--rootfunctions" {
+		projectPath := arglist[2]
+		packagePattern := arglist[3]
 		var rootFunctions []alib.FuncDescriptor
 		rootFunctions = append(rootFunctions, alib.FindRootFunctions(projectPath, packagePattern)...)
 		fmt.Println("rootfunctions:")
@@ -157,9 +165,40 @@ func main() {
 			fmt.Println("\t" + fun.TypeHash())
 		}
 	}
-	if os.Args[1] == "--revert" {
-		projectPath := os.Args[2]
+	if arglist[1] == "--revert" {
+		projectPath := arglist[2]
 		alib.Revert(projectPath)
 	}
+}
 
+func repl() {
+	replUsage()
+	for {
+		fmt.Println("enter command :> ")
+		scanner := bufio.NewScanner(os.Stdin)
+		scanner.Scan()
+		args := scanner.Text()
+		var cmd []string
+		cmd = append(cmd, "autotel")
+		cmd = append(cmd, strings.Split(args, " ")...)
+		if cmd[1] == "exit" {
+			break
+		}
+		if len(cmd) < 4 {
+			replUsage()
+		}
+		executeCommand(cmd)
+	}
+}
+
+func main() {
+	fmt.Println("autotel compiler")
+	args := len(os.Args)
+	if args == 2 && os.Args[1] == "--repl" {
+		repl()
+	} else if args < 4 {
+		usage()
+		return
+	}
+	executeCommand(os.Args)
 }
