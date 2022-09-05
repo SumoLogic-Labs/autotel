@@ -49,42 +49,6 @@ func replUsage() {
 
 }
 
-func inject(root string, packagePattern string) {
-	var rootFunctions []alib.FuncDescriptor
-
-	rootFunctions = append(rootFunctions, alib.FindRootFunctions(root, packagePattern)...)
-
-	funcDecls := alib.FindFuncDecls(root, packagePattern)
-	backwardCallGraph := alib.BuildCallGraph(root, packagePattern, funcDecls)
-
-	fmt.Println("\n\tchild parent")
-	for k, v := range backwardCallGraph {
-		fmt.Print("\n\t", k)
-		fmt.Print(" ", v)
-	}
-	fmt.Println("")
-
-	alib.ExecutePasses(root, packagePattern, rootFunctions, funcDecls, backwardCallGraph)
-}
-
-func injectAndDumpIr(root string, packagePattern string) {
-	var rootFunctions []alib.FuncDescriptor
-
-	rootFunctions = append(rootFunctions, alib.FindRootFunctions(root, packagePattern)...)
-
-	funcDecls := alib.FindFuncDecls(root, packagePattern)
-	backwardCallGraph := alib.BuildCallGraph(root, packagePattern, funcDecls)
-
-	fmt.Println("\n\tchild parent")
-	for k, v := range backwardCallGraph {
-		fmt.Print("\n\t", k)
-		fmt.Print(" ", v)
-	}
-	fmt.Println("")
-
-	alib.ExecutePassesDumpIr(root, packagePattern, rootFunctions, funcDecls, backwardCallGraph)
-}
-
 // Parsing algorithm works as follows. It goes through all function
 // decls and infer function bodies to find call to AutotelEntryPoint__
 // A parent function of this call will become root of instrumentation
@@ -94,13 +58,41 @@ func executeCommand(arglist []string) {
 	if arglist[1] == "--inject" {
 		projectPath := arglist[2]
 		packagePattern := arglist[3]
-		inject(projectPath, packagePattern)
+		var rootFunctions []alib.FuncDescriptor
+
+		rootFunctions = append(rootFunctions, alib.FindRootFunctions(projectPath, packagePattern)...)
+
+		funcDecls := alib.FindFuncDecls(projectPath, packagePattern)
+		backwardCallGraph := alib.BuildCallGraph(projectPath, packagePattern, funcDecls)
+
+		fmt.Println("\n\tchild parent")
+		for k, v := range backwardCallGraph {
+			fmt.Print("\n\t", k)
+			fmt.Print(" ", v)
+		}
+		fmt.Println("")
+
+		alib.ExecutePasses(projectPath, packagePattern, rootFunctions, funcDecls, backwardCallGraph)
 		fmt.Println("\tinstrumentation done")
 	}
 	if arglist[1] == "--inject-dump-ir" {
 		projectPath := arglist[2]
 		packagePattern := arglist[3]
-		injectAndDumpIr(projectPath, packagePattern)
+		var rootFunctions []alib.FuncDescriptor
+
+		rootFunctions = append(rootFunctions, alib.FindRootFunctions(projectPath, packagePattern)...)
+
+		funcDecls := alib.FindFuncDecls(projectPath, packagePattern)
+		backwardCallGraph := alib.BuildCallGraph(projectPath, packagePattern, funcDecls)
+
+		fmt.Println("\n\tchild parent")
+		for k, v := range backwardCallGraph {
+			fmt.Print("\n\t", k)
+			fmt.Print(" ", v)
+		}
+		fmt.Println("")
+
+		alib.ExecutePassesDumpIr(projectPath, packagePattern, rootFunctions, funcDecls, backwardCallGraph)
 		fmt.Println("\tinstrumentation done")
 	}
 	if arglist[1] == "--inject-using-graph" {

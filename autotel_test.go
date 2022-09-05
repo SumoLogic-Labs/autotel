@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/pdelewski/autotel/lib"
+	alib "github.com/pdelewski/autotel/lib"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -37,6 +38,24 @@ var testcases = map[string]string{
 }
 
 var failures []string
+
+func injectAndDumpIr(root string, packagePattern string) {
+	var rootFunctions []alib.FuncDescriptor
+
+	rootFunctions = append(rootFunctions, alib.FindRootFunctions(root, packagePattern)...)
+
+	funcDecls := alib.FindFuncDecls(root, packagePattern)
+	backwardCallGraph := alib.BuildCallGraph(root, packagePattern, funcDecls)
+
+	fmt.Println("\n\tchild parent")
+	for k, v := range backwardCallGraph {
+		fmt.Print("\n\t", k)
+		fmt.Print(" ", v)
+	}
+	fmt.Println("")
+
+	alib.ExecutePassesDumpIr(root, packagePattern, rootFunctions, funcDecls, backwardCallGraph)
+}
 
 func Test(t *testing.T) {
 
