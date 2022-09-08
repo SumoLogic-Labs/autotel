@@ -49,6 +49,14 @@ func replUsage() {
 
 }
 
+type AutotelState struct {
+	RootFunctions  []alib.FuncDescriptor
+	FuncDecls      map[alib.FuncDescriptor]bool
+	CallGraph      map[alib.FuncDescriptor][]alib.FuncDescriptor
+	ProjectPath    string
+	PackagePattern string
+}
+
 // Parsing algorithm works as follows. It goes through all function
 // decls and infer function bodies to find call to AutotelEntryPoint__
 // A parent function of this call will become root of instrumentation
