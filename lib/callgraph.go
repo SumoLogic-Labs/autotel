@@ -306,7 +306,7 @@ func FindFuncDecls(projectPath string, packagePattern string) map[FuncDescriptor
 	return funcDecls
 }
 
-func FindInterfaces(projectPath string, packagePattern string) []string {
+func FindInterfaces(projectPath string, packagePattern string) map[string]bool {
 	fset := token.NewFileSet()
 	cfg := &packages.Config{Fset: fset, Mode: mode, Dir: projectPath}
 	pkgs, err := packages.Load(cfg, packagePattern)
@@ -314,7 +314,7 @@ func FindInterfaces(projectPath string, packagePattern string) []string {
 		log.Fatal(err)
 	}
 	fmt.Println("FindInterfaces")
-	var interaceTable []string
+	interaceTable := make(map[string]bool)
 	for _, pkg := range pkgs {
 		fmt.Println("\t", pkg)
 		for _, node := range pkg.Syntax {
@@ -323,7 +323,7 @@ func FindInterfaces(projectPath string, packagePattern string) []string {
 				switch x := n.(type) {
 				case *ast.TypeSpec:
 					if _, ok := x.Type.(*ast.InterfaceType); ok {
-						interaceTable = append(interaceTable, x.Name.Name)
+						interaceTable[x.Name.Name] = true
 					}
 				}
 				return true
