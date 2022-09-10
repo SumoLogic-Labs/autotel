@@ -198,7 +198,8 @@ func PropagateContext(projectPath string,
 					visited := map[FuncDescriptor]bool{}
 
 					if isPath(callgraph, fun, rootFunctions[0], visited) {
-						fmt.Println("\t\t\tContextPropagation FuncDecl:", fun)
+						fmt.Println("\t\t\tContextPropagation FuncDecl:", funId,
+							pkg.TypesInfo.Defs[x.Name].Type().String(), " @called : ", fset.File(node.Pos()).Name())
 						addImports = true
 						x.Type.Params.List = append([]*ast.Field{ctxField}, x.Type.Params.List...)
 					}
