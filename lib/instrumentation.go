@@ -30,6 +30,7 @@ func Instrument(projectPath string,
 	packagePattern string,
 	callgraph map[FuncDescriptor][]FuncDescriptor,
 	rootFunctions []FuncDescriptor,
+	interfaces map[string]bool,
 	passFileSuffix string) {
 
 	fset := token.NewFileSet()
@@ -102,7 +103,7 @@ func Instrument(projectPath string,
 					pkgPath := ""
 
 					if x.Recv != nil {
-						pkgPath = GetPackagePathHashFromFunc(pkg, pkgs, x)
+						pkgPath = GetPackagePathHashFromFunc(pkg, pkgs, x, interfaces)
 					} else {
 						pkgPath = GetPkgNameFromDefsTable(pkg, x.Name)
 					}

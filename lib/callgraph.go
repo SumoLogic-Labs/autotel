@@ -129,7 +129,8 @@ func GetMostInnerAstIdent(inSel *ast.SelectorExpr) *ast.Ident {
 	return l[1]
 }
 
-func GetPackagePathHashFromFunc(pkg *packages.Package, pkgs []*packages.Package, x *ast.FuncDecl) string {
+func GetPackagePathHashFromFunc(pkg *packages.Package,
+	pkgs []*packages.Package, x *ast.FuncDecl, interfaces map[string]bool) string {
 	pkgPath := ""
 	for _, v := range x.Recv.List {
 		for _, dependentpkg := range pkgs {
@@ -140,8 +141,13 @@ func GetPackagePathHashFromFunc(pkg *packages.Package, pkgs []*packages.Package,
 							continue
 						}
 						funType := pkg.TypesInfo.Defs[v.Names[0]].Type()
+
 						if types.Implements(funType, defs.Type().Underlying().(*types.Interface)) {
-							pkgPath = defs.Type().String()
+							interfaceExists := interfaces[defs.Type().String()]
+							if interfaceExists {
+								pkgPath = defs.Type().String()
+							}
+
 							break
 						} else {
 							pkgPath = funType.String()
@@ -203,7 +209,8 @@ func GetPkgNameFromDefsTable(pkg *packages.Package, ident *ast.Ident) string {
 func BuildCallGraph(
 	projectPath string,
 	packagePattern string,
-	funcDecls map[FuncDescriptor]bool) map[FuncDescriptor][]FuncDescriptor {
+	funcDecls map[FuncDescriptor]bool,
+	interfaces map[string]bool) map[FuncDescriptor][]FuncDescriptor {
 
 	fset := token.NewFileSet()
 	cfg := &packages.Config{Fset: fset, Mode: mode, Dir: projectPath}
@@ -256,7 +263,7 @@ func BuildCallGraph(
 				case *ast.FuncDecl:
 					pkgPath := ""
 					if x.Recv != nil {
-						pkgPath = GetPackagePathHashFromFunc(pkg, pkgs, x)
+						pkgPath = GetPackagePathHashFromFunc(pkg, pkgs, x, interfaces)
 					} else {
 						pkgPath = GetPkgNameFromDefsTable(pkg, x.Name)
 					}
@@ -272,7 +279,7 @@ func BuildCallGraph(
 	return backwardCallGraph
 }
 
-func FindFuncDecls(projectPath string, packagePattern string) map[FuncDescriptor]bool {
+func FindFuncDecls(projectPath string, packagePattern string, interfaces map[string]bool) map[FuncDescriptor]bool {
 	fset := token.NewFileSet()
 	cfg := &packages.Config{Fset: fset, Mode: mode, Dir: projectPath}
 	pkgs, err := packages.Load(cfg, packagePattern)
@@ -290,7 +297,7 @@ func FindFuncDecls(projectPath string, packagePattern string) map[FuncDescriptor
 				case *ast.FuncDecl:
 					pkgPath := ""
 					if x.Recv != nil {
-						pkgPath = GetPackagePathHashFromFunc(pkg, pkgs, x)
+						pkgPath = GetPackagePathHashFromFunc(pkg, pkgs, x, interfaces)
 					} else {
 						pkgPath = GetPkgNameFromDefsTable(pkg, x.Name)
 					}
@@ -323,7 +330,7 @@ func FindInterfaces(projectPath string, packagePattern string) map[string]bool {
 				switch x := n.(type) {
 				case *ast.TypeSpec:
 					if _, ok := x.Type.(*ast.InterfaceType); ok {
-						interaceTable[x.Name.Name] = true
+						interaceTable[pkg.TypesInfo.Defs[x.Name].Type().String()] = true
 					}
 				}
 				return true

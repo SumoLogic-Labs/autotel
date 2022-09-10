@@ -46,6 +46,7 @@ func PropagateContext(projectPath string,
 	callgraph map[FuncDescriptor][]FuncDescriptor,
 	rootFunctions []FuncDescriptor,
 	funcDecls map[FuncDescriptor]bool,
+	interfaces map[string]bool,
 	passFileSuffix string) {
 
 	fset := token.NewFileSet()
@@ -178,7 +179,7 @@ func PropagateContext(projectPath string,
 					pkgPath := ""
 
 					if x.Recv != nil {
-						pkgPath = GetPackagePathHashFromFunc(pkg, pkgs, x)
+						pkgPath = GetPackagePathHashFromFunc(pkg, pkgs, x, interfaces)
 					} else {
 						pkgPath = GetPkgNameFromDefsTable(pkg, x.Name)
 					}

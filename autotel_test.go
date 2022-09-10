@@ -43,9 +43,9 @@ func injectAndDumpIr(root string, packagePattern string) {
 	var rootFunctions []alib.FuncDescriptor
 
 	rootFunctions = append(rootFunctions, alib.FindRootFunctions(root, packagePattern)...)
-
-	funcDecls := alib.FindFuncDecls(root, packagePattern)
-	backwardCallGraph := alib.BuildCallGraph(root, packagePattern, funcDecls)
+	interfaces := alib.FindInterfaces(root, packagePattern)
+	funcDecls := alib.FindFuncDecls(root, packagePattern, interfaces)
+	backwardCallGraph := alib.BuildCallGraph(root, packagePattern, funcDecls, interfaces)
 
 	fmt.Println("\n\tchild parent")
 	for k, v := range backwardCallGraph {
@@ -54,7 +54,7 @@ func injectAndDumpIr(root string, packagePattern string) {
 	}
 	fmt.Println("")
 
-	alib.ExecutePassesDumpIr(root, packagePattern, rootFunctions, funcDecls, backwardCallGraph)
+	alib.ExecutePassesDumpIr(root, packagePattern, rootFunctions, funcDecls, backwardCallGraph, interfaces)
 }
 
 func Test(t *testing.T) {

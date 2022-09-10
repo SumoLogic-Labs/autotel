@@ -53,6 +53,7 @@ type AutotelState struct {
 	RootFunctions  []alib.FuncDescriptor
 	FuncDecls      map[alib.FuncDescriptor]bool
 	CallGraph      map[alib.FuncDescriptor][]alib.FuncDescriptor
+	Interfaces     map[string]bool
 	ProjectPath    string
 	PackagePattern string
 }
@@ -69,9 +70,10 @@ func executeCommand(arglist []string, autotelState *AutotelState) {
 		var rootFunctions []alib.FuncDescriptor
 		var funcDecls map[alib.FuncDescriptor]bool
 		var backwardCallGraph map[alib.FuncDescriptor][]alib.FuncDescriptor
-
+		var interfaces map[string]bool
 		if projectPath == autotelState.ProjectPath && projectPath == autotelState.PackagePattern &&
-			len(autotelState.RootFunctions) > 0 && len(autotelState.FuncDecls) > 0 && len(autotelState.CallGraph) > 0 {
+			len(autotelState.RootFunctions) > 0 && len(autotelState.FuncDecls) > 0 && len(autotelState.CallGraph) > 0 &&
+			len(autotelState.Interfaces) > 0 {
 			fmt.Println("\n\tchild parent")
 			for k, v := range backwardCallGraph {
 				fmt.Print("\n\t", k)
@@ -79,17 +81,19 @@ func executeCommand(arglist []string, autotelState *AutotelState) {
 			}
 			fmt.Println("")
 
-			alib.ExecutePasses(projectPath, packagePattern, rootFunctions, funcDecls, backwardCallGraph)
+			alib.ExecutePasses(projectPath, packagePattern, rootFunctions, funcDecls, backwardCallGraph, interfaces)
 			fmt.Println("\tinstrumentation done")
 		} else {
+			interfaces = alib.FindInterfaces(projectPath, packagePattern)
 			rootFunctions = append(rootFunctions, alib.FindRootFunctions(projectPath, packagePattern)...)
-			funcDecls = alib.FindFuncDecls(projectPath, packagePattern)
-			backwardCallGraph = alib.BuildCallGraph(projectPath, packagePattern, funcDecls)
+			funcDecls = alib.FindFuncDecls(projectPath, packagePattern, interfaces)
+			backwardCallGraph = alib.BuildCallGraph(projectPath, packagePattern, funcDecls, interfaces)
 			autotelState.ProjectPath = projectPath
 			autotelState.PackagePattern = packagePattern
 			autotelState.FuncDecls = funcDecls
 			autotelState.RootFunctions = rootFunctions
 			autotelState.CallGraph = backwardCallGraph
+			autotelState.Interfaces = interfaces
 			fmt.Println("\n\tchild parent")
 			for k, v := range backwardCallGraph {
 				fmt.Print("\n\t", k)
@@ -97,7 +101,7 @@ func executeCommand(arglist []string, autotelState *AutotelState) {
 			}
 			fmt.Println("")
 
-			alib.ExecutePasses(projectPath, packagePattern, rootFunctions, funcDecls, backwardCallGraph)
+			alib.ExecutePasses(projectPath, packagePattern, rootFunctions, funcDecls, backwardCallGraph, interfaces)
 			fmt.Println("\tinstrumentation done")
 		}
 	}
@@ -107,9 +111,10 @@ func executeCommand(arglist []string, autotelState *AutotelState) {
 		var rootFunctions []alib.FuncDescriptor
 		var funcDecls map[alib.FuncDescriptor]bool
 		var backwardCallGraph map[alib.FuncDescriptor][]alib.FuncDescriptor
-
+		var interfaces map[string]bool
 		if projectPath == autotelState.ProjectPath && projectPath == autotelState.PackagePattern &&
-			len(autotelState.RootFunctions) > 0 && len(autotelState.FuncDecls) > 0 && len(autotelState.CallGraph) > 0 {
+			len(autotelState.RootFunctions) > 0 && len(autotelState.FuncDecls) > 0 && len(autotelState.CallGraph) > 0 &&
+			len(autotelState.Interfaces) > 0 {
 			fmt.Println("\n\tchild parent")
 			for k, v := range backwardCallGraph {
 				fmt.Print("\n\t", k)
@@ -117,24 +122,27 @@ func executeCommand(arglist []string, autotelState *AutotelState) {
 			}
 			fmt.Println("")
 
-			alib.ExecutePasses(projectPath, packagePattern, rootFunctions, funcDecls, backwardCallGraph)
+			alib.ExecutePasses(projectPath, packagePattern, rootFunctions, funcDecls, backwardCallGraph, interfaces)
 			fmt.Println("\tinstrumentation done")
 		} else {
+			interfaces = alib.FindInterfaces(projectPath, packagePattern)
 			rootFunctions = append(rootFunctions, alib.FindRootFunctions(projectPath, packagePattern)...)
-			funcDecls = alib.FindFuncDecls(projectPath, packagePattern)
-			backwardCallGraph = alib.BuildCallGraph(projectPath, packagePattern, funcDecls)
+			funcDecls = alib.FindFuncDecls(projectPath, packagePattern, interfaces)
+			backwardCallGraph = alib.BuildCallGraph(projectPath, packagePattern, funcDecls, interfaces)
+
 			autotelState.ProjectPath = projectPath
 			autotelState.PackagePattern = packagePattern
 			autotelState.FuncDecls = funcDecls
 			autotelState.RootFunctions = rootFunctions
 			autotelState.CallGraph = backwardCallGraph
+			autotelState.Interfaces = interfaces
 			fmt.Println("\n\tchild parent")
 			for k, v := range backwardCallGraph {
 				fmt.Print("\n\t", k)
 				fmt.Print(" ", v)
 			}
 			fmt.Println("")
-			alib.ExecutePassesDumpIr(projectPath, packagePattern, rootFunctions, funcDecls, backwardCallGraph)
+			alib.ExecutePassesDumpIr(projectPath, packagePattern, rootFunctions, funcDecls, backwardCallGraph, interfaces)
 			fmt.Println("\tinstrumentation done")
 
 		}
@@ -167,10 +175,10 @@ func executeCommand(arglist []string, autotelState *AutotelState) {
 		}
 		projectPath := arglist[3]
 		packagePattern := arglist[4]
+		interfaces := alib.FindInterfaces(projectPath, packagePattern)
+		funcDecls := alib.FindFuncDecls(projectPath, packagePattern, interfaces)
 
-		funcDecls := alib.FindFuncDecls(projectPath, packagePattern)
-
-		alib.ExecutePasses(projectPath, packagePattern, rootFunctions, funcDecls, backwardCallGraph)
+		alib.ExecutePasses(projectPath, packagePattern, rootFunctions, funcDecls, backwardCallGraph, interfaces)
 	}
 	if arglist[1] == "--dumpcfg" {
 		projectPath := arglist[2]
@@ -179,19 +187,22 @@ func executeCommand(arglist []string, autotelState *AutotelState) {
 		var backwardCallGraph map[alib.FuncDescriptor][]alib.FuncDescriptor
 
 		if projectPath == autotelState.ProjectPath && projectPath == autotelState.PackagePattern &&
-			len(autotelState.FuncDecls) > 0 && len(autotelState.CallGraph) > 0 {
+			len(autotelState.FuncDecls) > 0 && len(autotelState.CallGraph) > 0 &&
+			len(autotelState.Interfaces) > 0 {
 			fmt.Println("\n\tchild parent")
 			for k, v := range backwardCallGraph {
 				fmt.Print("\n\t", k)
 				fmt.Print(" ", v)
 			}
 		} else {
-			funcDecls = alib.FindFuncDecls(projectPath, packagePattern)
-			backwardCallGraph = alib.BuildCallGraph(projectPath, packagePattern, funcDecls)
+			interfaces := alib.FindInterfaces(projectPath, packagePattern)
+			funcDecls = alib.FindFuncDecls(projectPath, packagePattern, interfaces)
+			backwardCallGraph = alib.BuildCallGraph(projectPath, packagePattern, funcDecls, interfaces)
 			autotelState.ProjectPath = projectPath
 			autotelState.PackagePattern = packagePattern
 			autotelState.FuncDecls = funcDecls
 			autotelState.CallGraph = backwardCallGraph
+			autotelState.Interfaces = interfaces
 		}
 
 		fmt.Println("\n\tchild parent")
@@ -211,12 +222,14 @@ func executeCommand(arglist []string, autotelState *AutotelState) {
 			len(autotelState.FuncDecls) > 0 && len(autotelState.CallGraph) > 0 {
 			alib.Generatecfg(backwardCallGraph, "callgraph.js")
 		} else {
-			funcDecls = alib.FindFuncDecls(projectPath, packagePattern)
-			backwardCallGraph = alib.BuildCallGraph(projectPath, packagePattern, funcDecls)
+			interfaces := alib.FindInterfaces(projectPath, packagePattern)
+			funcDecls = alib.FindFuncDecls(projectPath, packagePattern, interfaces)
+			backwardCallGraph = alib.BuildCallGraph(projectPath, packagePattern, funcDecls, interfaces)
 			autotelState.ProjectPath = projectPath
 			autotelState.PackagePattern = packagePattern
 			autotelState.FuncDecls = funcDecls
 			autotelState.CallGraph = backwardCallGraph
+			autotelState.Interfaces = interfaces
 			alib.Generatecfg(backwardCallGraph, "callgraph.js")
 		}
 	}
