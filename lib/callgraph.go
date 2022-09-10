@@ -306,6 +306,33 @@ func FindFuncDecls(projectPath string, packagePattern string) map[FuncDescriptor
 	return funcDecls
 }
 
+func FindInterfaces(projectPath string, packagePattern string) []string {
+	fset := token.NewFileSet()
+	cfg := &packages.Config{Fset: fset, Mode: mode, Dir: projectPath}
+	pkgs, err := packages.Load(cfg, packagePattern)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("FindInterfaces")
+	var interaceTable []string
+	for _, pkg := range pkgs {
+		fmt.Println("\t", pkg)
+		for _, node := range pkg.Syntax {
+			fmt.Println("\t\t", fset.File(node.Pos()).Name())
+			ast.Inspect(node, func(n ast.Node) bool {
+				switch x := n.(type) {
+				case *ast.TypeSpec:
+					if _, ok := x.Type.(*ast.InterfaceType); ok {
+						interaceTable = append(interaceTable, x.Name.Name)
+					}
+				}
+				return true
+			})
+		}
+	}
+	return interaceTable
+}
+
 func InferRootFunctionsFromGraph(callgraph map[FuncDescriptor][]FuncDescriptor) []FuncDescriptor {
 	var allFunctions map[FuncDescriptor]bool
 	var rootFunctions []FuncDescriptor
