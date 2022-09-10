@@ -114,11 +114,13 @@ func PropagateContext(projectPath string,
 					fun := FuncDescriptor{funId,
 						pkg.TypesInfo.Uses[ident].Type().String()}
 					found := funcDecls[fun]
+
 					// inject context parameter only
 					// to these functions for which function decl
 					// exists
 
 					if found {
+						fmt.Println("\t\t\tContextPropagation FuncCall:", funId, pkg.TypesInfo.Uses[ident].Type().String())
 						emitEmptyContext(x, fun, ctxArg)
 					}
 
@@ -137,15 +139,16 @@ func PropagateContext(projectPath string,
 					funId := pkgPath + "." + pkg.TypesInfo.Uses[sel.Sel].Name()
 					fun := FuncDescriptor{funId,
 						pkg.TypesInfo.Uses[sel.Sel].Type().String()}
-					fmt.Println("\t\t\tFuncCall via selector:", funId,
-						pkg.TypesInfo.Uses[sel.Sel].Type().String(),
-						" @called : ", fset.File(node.Pos()).Name())
+
 					found := funcDecls[fun]
 					// inject context parameter only
 					// to these functions for which function decl
 					// exists
 
 					if found {
+						fmt.Println("\t\t\tContextPropagation FuncCall via selector:", funId,
+							pkg.TypesInfo.Uses[sel.Sel].Type().String(),
+							" @called : ", fset.File(node.Pos()).Name())
 						emitEmptyContext(x, fun, ctxArg)
 					}
 				}
@@ -193,16 +196,14 @@ func PropagateContext(projectPath string,
 						break
 					}
 					visited := map[FuncDescriptor]bool{}
-					fmt.Println("\t\t\tFuncDecl:", fun)
+
 					if isPath(callgraph, fun, rootFunctions[0], visited) {
+						fmt.Println("\t\t\tContextPropagation FuncDecl:", fun)
 						addImports = true
 						x.Type.Params.List = append([]*ast.Field{ctxField}, x.Type.Params.List...)
 					}
 				case *ast.CallExpr:
 					if ident, ok := x.Fun.(*ast.Ident); ok {
-						pkgPath := GetPkgNameFromUsesTable(pkg, ident)
-						funId := pkgPath + "." + pkg.TypesInfo.Uses[ident].Name()
-						fmt.Println("\t\t\tCallExpr:", funId, pkg.TypesInfo.Uses[ident].Type().String())
 
 						emitCallExpr(ident, n, ctxArg)
 					}
@@ -235,8 +236,8 @@ func PropagateContext(projectPath string,
 						funId := pkgPath + "." + iname.Name + "." + pkg.TypesInfo.Defs[method.Names[0]].Name()
 						fun := FuncDescriptor{funId,
 							pkg.TypesInfo.Defs[method.Names[0]].Type().String()}
-						fmt.Println("\t\t\tInterfaceType", fun.Id, fun.DeclType)
 						if isPath(callgraph, fun, rootFunctions[0], visited) {
+							fmt.Println("\t\t\tContext Propagation InterfaceType", fun.Id, fun.DeclType)
 							addImports = true
 							funcType.Params.List = append([]*ast.Field{ctxField}, funcType.Params.List...)
 						}
