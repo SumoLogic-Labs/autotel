@@ -147,23 +147,26 @@ func GetPackagePathHashFromFunc(pkg *packages.Package,
 							if interfaceExists {
 								pkgPath = defs.Type().String()
 							}
-
 							break
-						} else {
-							pkgPath = funType.String()
-							// We don't care if that's pointer, remove it from
-							// type id
-							if _, ok := funType.(*types.Pointer); ok {
-								pkgPath = strings.TrimPrefix(pkgPath, "*")
-							}
-							// We don't care if called via index, remove it from
-							// type id
-							if _, ok := funType.(*types.Slice); ok {
-								pkgPath = strings.TrimPrefix(pkgPath, "[]")
-							}
 						}
 					}
 				}
+			}
+		}
+	}
+	if len(pkgPath) == 0 {
+		for _, v := range x.Recv.List {
+			funType := pkg.TypesInfo.Defs[v.Names[0]].Type()
+			pkgPath = funType.String()
+			// We don't care if that's pointer, remove it from
+			// type id
+			if _, ok := funType.(*types.Pointer); ok {
+				pkgPath = strings.TrimPrefix(pkgPath, "*")
+			}
+			// We don't care if called via index, remove it from
+			// type id
+			if _, ok := funType.(*types.Slice); ok {
+				pkgPath = strings.TrimPrefix(pkgPath, "[]")
 			}
 		}
 	}
@@ -263,8 +266,10 @@ func BuildCallGraph(
 				case *ast.FuncDecl:
 					pkgPath := ""
 					if x.Recv != nil {
+
 						pkgPath = GetPackagePathHashFromFunc(pkg, pkgs, x, interfaces)
 					} else {
+
 						pkgPath = GetPkgNameFromDefsTable(pkg, x.Name)
 					}
 					funId := pkgPath + "." + pkg.TypesInfo.Defs[x.Name].Name()
@@ -330,6 +335,7 @@ func FindInterfaces(projectPath string, packagePattern string) map[string]bool {
 				switch x := n.(type) {
 				case *ast.TypeSpec:
 					if _, ok := x.Type.(*ast.InterfaceType); ok {
+						fmt.Println("\t\t\tInterface:", pkg.TypesInfo.Defs[x.Name].Type().String())
 						interaceTable[pkg.TypesInfo.Defs[x.Name].Type().String()] = true
 					}
 				}
