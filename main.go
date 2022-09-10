@@ -62,46 +62,82 @@ type AutotelState struct {
 // A parent function of this call will become root of instrumentation
 // Each function call from this place will be instrumented automatically
 
-func executeCommand(arglist []string) {
+func executeCommand(arglist []string, autotelState *AutotelState) {
 	if arglist[1] == "--inject" {
 		projectPath := arglist[2]
 		packagePattern := arglist[3]
 		var rootFunctions []alib.FuncDescriptor
+		var funcDecls map[alib.FuncDescriptor]bool
+		var backwardCallGraph map[alib.FuncDescriptor][]alib.FuncDescriptor
 
-		rootFunctions = append(rootFunctions, alib.FindRootFunctions(projectPath, packagePattern)...)
+		if projectPath == autotelState.ProjectPath && projectPath == autotelState.PackagePattern &&
+			len(autotelState.RootFunctions) > 0 && len(autotelState.FuncDecls) > 0 && len(autotelState.CallGraph) > 0 {
+			fmt.Println("\n\tchild parent")
+			for k, v := range backwardCallGraph {
+				fmt.Print("\n\t", k)
+				fmt.Print(" ", v)
+			}
+			fmt.Println("")
 
-		funcDecls := alib.FindFuncDecls(projectPath, packagePattern)
-		backwardCallGraph := alib.BuildCallGraph(projectPath, packagePattern, funcDecls)
+			alib.ExecutePasses(projectPath, packagePattern, rootFunctions, funcDecls, backwardCallGraph)
+			fmt.Println("\tinstrumentation done")
+		} else {
+			rootFunctions = append(rootFunctions, alib.FindRootFunctions(projectPath, packagePattern)...)
+			funcDecls = alib.FindFuncDecls(projectPath, packagePattern)
+			backwardCallGraph = alib.BuildCallGraph(projectPath, packagePattern, funcDecls)
+			autotelState.ProjectPath = projectPath
+			autotelState.PackagePattern = packagePattern
+			autotelState.FuncDecls = funcDecls
+			autotelState.RootFunctions = rootFunctions
+			autotelState.CallGraph = backwardCallGraph
+			fmt.Println("\n\tchild parent")
+			for k, v := range backwardCallGraph {
+				fmt.Print("\n\t", k)
+				fmt.Print(" ", v)
+			}
+			fmt.Println("")
 
-		fmt.Println("\n\tchild parent")
-		for k, v := range backwardCallGraph {
-			fmt.Print("\n\t", k)
-			fmt.Print(" ", v)
+			alib.ExecutePasses(projectPath, packagePattern, rootFunctions, funcDecls, backwardCallGraph)
+			fmt.Println("\tinstrumentation done")
 		}
-		fmt.Println("")
-
-		alib.ExecutePasses(projectPath, packagePattern, rootFunctions, funcDecls, backwardCallGraph)
-		fmt.Println("\tinstrumentation done")
 	}
 	if arglist[1] == "--inject-dump-ir" {
 		projectPath := arglist[2]
 		packagePattern := arglist[3]
 		var rootFunctions []alib.FuncDescriptor
+		var funcDecls map[alib.FuncDescriptor]bool
+		var backwardCallGraph map[alib.FuncDescriptor][]alib.FuncDescriptor
 
-		rootFunctions = append(rootFunctions, alib.FindRootFunctions(projectPath, packagePattern)...)
+		if projectPath == autotelState.ProjectPath && projectPath == autotelState.PackagePattern &&
+			len(autotelState.RootFunctions) > 0 && len(autotelState.FuncDecls) > 0 && len(autotelState.CallGraph) > 0 {
+			fmt.Println("\n\tchild parent")
+			for k, v := range backwardCallGraph {
+				fmt.Print("\n\t", k)
+				fmt.Print(" ", v)
+			}
+			fmt.Println("")
 
-		funcDecls := alib.FindFuncDecls(projectPath, packagePattern)
-		backwardCallGraph := alib.BuildCallGraph(projectPath, packagePattern, funcDecls)
+			alib.ExecutePasses(projectPath, packagePattern, rootFunctions, funcDecls, backwardCallGraph)
+			fmt.Println("\tinstrumentation done")
+		} else {
+			rootFunctions = append(rootFunctions, alib.FindRootFunctions(projectPath, packagePattern)...)
+			funcDecls = alib.FindFuncDecls(projectPath, packagePattern)
+			backwardCallGraph = alib.BuildCallGraph(projectPath, packagePattern, funcDecls)
+			autotelState.ProjectPath = projectPath
+			autotelState.PackagePattern = packagePattern
+			autotelState.FuncDecls = funcDecls
+			autotelState.RootFunctions = rootFunctions
+			autotelState.CallGraph = backwardCallGraph
+			fmt.Println("\n\tchild parent")
+			for k, v := range backwardCallGraph {
+				fmt.Print("\n\t", k)
+				fmt.Print(" ", v)
+			}
+			fmt.Println("")
+			alib.ExecutePassesDumpIr(projectPath, packagePattern, rootFunctions, funcDecls, backwardCallGraph)
+			fmt.Println("\tinstrumentation done")
 
-		fmt.Println("\n\tchild parent")
-		for k, v := range backwardCallGraph {
-			fmt.Print("\n\t", k)
-			fmt.Print(" ", v)
 		}
-		fmt.Println("")
-
-		alib.ExecutePassesDumpIr(projectPath, packagePattern, rootFunctions, funcDecls, backwardCallGraph)
-		fmt.Println("\tinstrumentation done")
 	}
 	if arglist[1] == "--inject-using-graph" {
 		graphFile := arglist[2]
@@ -139,30 +175,72 @@ func executeCommand(arglist []string) {
 	if arglist[1] == "--dumpcfg" {
 		projectPath := arglist[2]
 		packagePattern := arglist[3]
-		funcDecls := alib.FindFuncDecls(projectPath, packagePattern)
-		backwardCallGraph := alib.BuildCallGraph(projectPath, packagePattern, funcDecls)
+		var funcDecls map[alib.FuncDescriptor]bool
+		var backwardCallGraph map[alib.FuncDescriptor][]alib.FuncDescriptor
+
+		if projectPath == autotelState.ProjectPath && projectPath == autotelState.PackagePattern &&
+			len(autotelState.FuncDecls) > 0 && len(autotelState.CallGraph) > 0 {
+			fmt.Println("\n\tchild parent")
+			for k, v := range backwardCallGraph {
+				fmt.Print("\n\t", k)
+				fmt.Print(" ", v)
+			}
+		} else {
+			funcDecls = alib.FindFuncDecls(projectPath, packagePattern)
+			backwardCallGraph = alib.BuildCallGraph(projectPath, packagePattern, funcDecls)
+			autotelState.ProjectPath = projectPath
+			autotelState.PackagePattern = packagePattern
+			autotelState.FuncDecls = funcDecls
+			autotelState.CallGraph = backwardCallGraph
+		}
 
 		fmt.Println("\n\tchild parent")
 		for k, v := range backwardCallGraph {
 			fmt.Print("\n\t", k)
 			fmt.Print(" ", v)
 		}
+
 	}
 	if arglist[1] == "--gencfg" {
 		projectPath := arglist[2]
 		packagePattern := arglist[3]
-		funcDecls := alib.FindFuncDecls(projectPath, packagePattern)
-		backwardCallGraph := alib.BuildCallGraph(projectPath, packagePattern, funcDecls)
-		alib.Generatecfg(backwardCallGraph, "callgraph.js")
+		var funcDecls map[alib.FuncDescriptor]bool
+		var backwardCallGraph map[alib.FuncDescriptor][]alib.FuncDescriptor
+
+		if projectPath == autotelState.ProjectPath && projectPath == autotelState.PackagePattern &&
+			len(autotelState.FuncDecls) > 0 && len(autotelState.CallGraph) > 0 {
+			alib.Generatecfg(backwardCallGraph, "callgraph.js")
+		} else {
+			funcDecls = alib.FindFuncDecls(projectPath, packagePattern)
+			backwardCallGraph = alib.BuildCallGraph(projectPath, packagePattern, funcDecls)
+			autotelState.ProjectPath = projectPath
+			autotelState.PackagePattern = packagePattern
+			autotelState.FuncDecls = funcDecls
+			autotelState.CallGraph = backwardCallGraph
+			alib.Generatecfg(backwardCallGraph, "callgraph.js")
+		}
 	}
 	if arglist[1] == "--rootfunctions" {
 		projectPath := arglist[2]
 		packagePattern := arglist[3]
 		var rootFunctions []alib.FuncDescriptor
-		rootFunctions = append(rootFunctions, alib.FindRootFunctions(projectPath, packagePattern)...)
-		fmt.Println("rootfunctions:")
-		for _, fun := range rootFunctions {
-			fmt.Println("\t" + fun.TypeHash())
+
+		if projectPath == autotelState.ProjectPath && projectPath == autotelState.PackagePattern &&
+			len(autotelState.RootFunctions) > 0 {
+			fmt.Println("rootfunctions:")
+			for _, fun := range rootFunctions {
+				fmt.Println("\t" + fun.TypeHash())
+			}
+		} else {
+			rootFunctions = append(rootFunctions, alib.FindRootFunctions(projectPath, packagePattern)...)
+			autotelState.ProjectPath = projectPath
+			autotelState.PackagePattern = packagePattern
+			autotelState.RootFunctions = rootFunctions
+
+			fmt.Println("rootfunctions:")
+			for _, fun := range rootFunctions {
+				fmt.Println("\t" + fun.TypeHash())
+			}
 		}
 	}
 	if arglist[1] == "--revert" {
@@ -173,6 +251,7 @@ func executeCommand(arglist []string) {
 
 func repl() {
 	replUsage()
+	var autotelState AutotelState
 	for {
 		fmt.Println("\nenter command :> ")
 		scanner := bufio.NewScanner(os.Stdin)
@@ -188,7 +267,7 @@ func repl() {
 			replUsage()
 			continue
 		}
-		executeCommand(cmd)
+		executeCommand(cmd, &autotelState)
 	}
 }
 
@@ -197,9 +276,11 @@ func main() {
 	args := len(os.Args)
 	if args == 2 && os.Args[1] == "--repl" {
 		repl()
+		return
 	} else if args < 4 {
 		usage()
 		return
 	}
-	executeCommand(os.Args)
+	var autotelState AutotelState
+	executeCommand(os.Args, &autotelState)
 }
