@@ -156,6 +156,9 @@ func GetPackagePathHashFromFunc(pkg *packages.Package,
 	}
 	if len(pkgPath) == 0 {
 		for _, v := range x.Recv.List {
+			if len(v.Names) == 0 {
+				continue
+			}
 			funType := pkg.TypesInfo.Defs[v.Names[0]].Type()
 			pkgPath = funType.String()
 			// We don't care if that's pointer, remove it from

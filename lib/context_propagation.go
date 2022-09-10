@@ -82,27 +82,25 @@ func PropagateContext(projectPath string,
 			currentFun := "nil"
 
 			emitEmptyContext := func(x *ast.CallExpr, fun FuncDescriptor, ctxArg *ast.Ident) {
-				visited := map[FuncDescriptor]bool{}
-				if isPath(callgraph, fun, rootFunctions[0], visited) {
-					addImports = true
-					if currentFun != "nil" {
-						x.Args = append([]ast.Expr{ctxArg}, x.Args...)
-						return
-					}
-					contextTodo := &ast.CallExpr{
-						Fun: &ast.SelectorExpr{
-							X: &ast.Ident{
-								Name: "context",
-							},
-							Sel: &ast.Ident{
-								Name: "TODO",
-							},
-						},
-						Lparen:   62,
-						Ellipsis: 0,
-					}
-					x.Args = append([]ast.Expr{contextTodo}, x.Args...)
+				addImports = true
+				if currentFun != "nil" {
+					x.Args = append([]ast.Expr{ctxArg}, x.Args...)
+					return
 				}
+				contextTodo := &ast.CallExpr{
+					Fun: &ast.SelectorExpr{
+						X: &ast.Ident{
+							Name: "context",
+						},
+						Sel: &ast.Ident{
+							Name: "TODO",
+						},
+					},
+					Lparen:   62,
+					Ellipsis: 0,
+				}
+				x.Args = append([]ast.Expr{contextTodo}, x.Args...)
+
 			}
 			emitCallExpr := func(ident *ast.Ident, n ast.Node, ctxArg *ast.Ident) {
 				switch x := n.(type) {
@@ -121,8 +119,11 @@ func PropagateContext(projectPath string,
 					// exists
 
 					if found {
-						fmt.Println("\t\t\tContextPropagation FuncCall:", funId, pkg.TypesInfo.Uses[ident].Type().String())
-						emitEmptyContext(x, fun, ctxArg)
+						visited := map[FuncDescriptor]bool{}
+						if isPath(callgraph, fun, rootFunctions[0], visited) {
+							fmt.Println("\t\t\tContextPropagation FuncCall:", funId, pkg.TypesInfo.Uses[ident].Type().String())
+							emitEmptyContext(x, fun, ctxArg)
+						}
 					}
 
 				}
@@ -147,10 +148,13 @@ func PropagateContext(projectPath string,
 					// exists
 
 					if found {
-						fmt.Println("\t\t\tContextPropagation FuncCall via selector:", funId,
-							pkg.TypesInfo.Uses[sel.Sel].Type().String(),
-							" @called : ", fset.File(node.Pos()).Name())
-						emitEmptyContext(x, fun, ctxArg)
+						visited := map[FuncDescriptor]bool{}
+						if isPath(callgraph, fun, rootFunctions[0], visited) {
+							fmt.Println("\t\t\tContextPropagation FuncCall via selector:", funId,
+								pkg.TypesInfo.Uses[sel.Sel].Type().String(),
+								" @called : ", fset.File(node.Pos()).Name())
+							emitEmptyContext(x, fun, ctxArg)
+						}
 					}
 				}
 			}
