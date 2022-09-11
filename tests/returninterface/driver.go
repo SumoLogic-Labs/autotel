@@ -6,6 +6,10 @@ type Serializer interface {
 	Serialize()
 }
 
+type SerializerExt interface {
+	Serialize()
+}
+
 type BasicSerializer struct {
 }
 
