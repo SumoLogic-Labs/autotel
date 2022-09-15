@@ -214,17 +214,9 @@ func PropagateContext(projectPath string,
 						emitCallExpr(ident, n, ctxArg)
 					}
 
-					if _, ok := x.Fun.(*ast.FuncLit); ok {
-						addImports = true
-						x.Args = append([]ast.Expr{ctxArg}, x.Args...)
-					}
 					if sel, ok := x.Fun.(*ast.SelectorExpr); ok {
 						emitCallExprFromSelector(sel, n, ctxArg)
 					}
-
-				case *ast.FuncLit:
-					addImports = true
-					x.Type.Params.List = append([]*ast.Field{ctxField}, x.Type.Params.List...)
 
 				case *ast.TypeSpec:
 					iname := x.Name

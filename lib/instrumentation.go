@@ -468,7 +468,7 @@ func Instrument(projectPath string,
 								Lparen: 62,
 								Args: []ast.Expr{
 									&ast.Ident{
-										Name: "__tracing_ctx",
+										Name: "__child_tracing_ctx",
 									},
 									&ast.Ident{
 										Name: `"` + "anonymous" + `"`,
