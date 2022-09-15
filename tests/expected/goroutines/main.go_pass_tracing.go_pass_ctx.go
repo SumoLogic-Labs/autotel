@@ -29,13 +29,12 @@ func foo(__tracing_ctx context.Context,) {
 }
 
 func main() {
-	__child_tracing_ctx := context.TODO()
-	_ = __child_tracing_ctx
 	ts := rtlib.NewTracingState()
 	defer rtlib.Shutdown(ts)
 	otel.SetTracerProvider(ts.Tp)
 	ctx := context.Background()
 	__child_tracing_ctx, span := otel.Tracer("main").Start(ctx, "main")
+	_ = __child_tracing_ctx
 	defer span.End()
 	rtlib.AutotelEntryPoint__()
 	messages := make(chan string)
