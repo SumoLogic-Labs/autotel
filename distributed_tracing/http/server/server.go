@@ -14,7 +14,11 @@ func hello(w http.ResponseWriter, req *http.Request) {
 
 func main() {
 	rtlib.AutotelEntryPoint__()
+	anotherHandler := func(w http.ResponseWriter, req *http.Request) {
+	}
+
 	http.HandleFunc("/hello", hello)
+	http.HandleFunc("/another", anotherHandler)
 
 	http.ListenAndServe(":8090", nil)
 }
