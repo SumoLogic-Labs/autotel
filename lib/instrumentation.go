@@ -61,28 +61,6 @@ func Instrument(projectPath string,
 				continue
 			}
 
-			childTracingTodo := &ast.AssignStmt{
-				Lhs: []ast.Expr{
-					&ast.Ident{
-						Name: "__child_tracing_ctx",
-					},
-				},
-				Tok: token.DEFINE,
-				Rhs: []ast.Expr{
-					&ast.CallExpr{
-						Fun: &ast.SelectorExpr{
-							X: &ast.Ident{
-								Name: "context",
-							},
-							Sel: &ast.Ident{
-								Name: "TODO",
-							},
-						},
-						Lparen:   62,
-						Ellipsis: 0,
-					},
-				},
-			}
 			childTracingSupress := &ast.AssignStmt{
 				Lhs: []ast.Expr{
 					&ast.Ident{
@@ -115,8 +93,6 @@ func Instrument(projectPath string,
 					_, exists := callgraph[fun]
 					if !exists {
 						if !Contains(rootFunctions, fun) {
-							addContext = true
-							x.Body.List = append([]ast.Stmt{childTracingTodo, childTracingSupress}, x.Body.List...)
 							return false
 						}
 					}
@@ -227,8 +203,6 @@ func Instrument(projectPath string,
 						} else {
 							// check whether this function is root function
 							if !Contains(rootFunctions, fun) {
-								x.Body.List = append([]ast.Stmt{childTracingTodo, childTracingSupress}, x.Body.List...)
-								addContext = true
 								return false
 							}
 							s1 := &ast.ExprStmt{
@@ -405,8 +379,7 @@ func Instrument(projectPath string,
 								},
 							}
 							_ = s1
-							x.Body.List = append([]ast.Stmt{s2, s3, s4, s5, s6, s8}, x.Body.List...)
-							x.Body.List = append([]ast.Stmt{childTracingTodo, childTracingSupress}, x.Body.List...)
+							x.Body.List = append([]ast.Stmt{s2, s3, s4, s5, s6, childTracingSupress, s8}, x.Body.List...)
 							addContext = true
 							addImports = true
 
