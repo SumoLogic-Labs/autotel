@@ -31,12 +31,12 @@ func FibonacciHelper(__tracing_ctx context.Context, n uint) (uint64, error) {
 	__child_tracing_ctx, span := otel.Tracer("FibonacciHelper").Start(__tracing_ctx, "FibonacciHelper")
 	_ = __child_tracing_ctx
 	defer span.End()
-	func(__tracing_ctx context.Context,) {
-		__child_tracing_ctx, span := otel.Tracer("anonymous").Start(__tracing_ctx, "anonymous")
+	func() {
+		__child_tracing_ctx, span := otel.Tracer("anonymous").Start(__child_tracing_ctx, "anonymous")
 		_ = __child_tracing_ctx
 		defer span.End()
 		foo(__child_tracing_ctx)
-	}(__child_tracing_ctx)
+	}()
 	return Fibonacci(__child_tracing_ctx, n)
 }
 

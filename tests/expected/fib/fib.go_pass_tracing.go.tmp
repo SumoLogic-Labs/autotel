@@ -32,7 +32,7 @@ func FibonacciHelper(n uint) (uint64, error) {
 	_ = __child_tracing_ctx
 	defer span.End()
 	func() {
-		__child_tracing_ctx, span := otel.Tracer("anonymous").Start(__tracing_ctx, "anonymous")
+		__child_tracing_ctx, span := otel.Tracer("anonymous").Start(__child_tracing_ctx, "anonymous")
 		_ = __child_tracing_ctx
 		defer span.End()
 		foo()
