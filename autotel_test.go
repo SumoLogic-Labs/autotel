@@ -21,8 +21,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/pdelewski/autotel/lib"
-	alib "github.com/pdelewski/autotel/lib"
+	"github.com/sumologic-labs/autotel/lib"
+	alib "github.com/sumologic-labs/autotel/lib"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -54,7 +54,7 @@ func injectAndDumpIr(root string, packagePattern string) {
 	}
 	fmt.Println("")
 
-	alib.ExecutePassesDumpIr(root, packagePattern, rootFunctions, funcDecls, backwardCallGraph, interfaces)
+	ExecutePassesDumpIr(root, packagePattern, rootFunctions, funcDecls, backwardCallGraph, interfaces)
 }
 
 func Test(t *testing.T) {

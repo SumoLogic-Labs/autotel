@@ -12,7 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package lib
+package main
+
+import (
+	"github.com/sumologic-labs/autotel/instrumentations/http"
+	"github.com/sumologic-labs/autotel/lib"
+)
 
 const (
 	contextPassFileSuffix         = "_pass_ctx.go"
@@ -21,19 +26,26 @@ const (
 
 func ExecutePassesDumpIr(projectPath string,
 	packagePattern string,
-	rootFunctions []FuncDescriptor,
-	funcDecls map[FuncDescriptor]bool,
-	backwardCallGraph map[FuncDescriptor][]FuncDescriptor,
+	rootFunctions []lib.FuncDescriptor,
+	funcDecls map[lib.FuncDescriptor]bool,
+	backwardCallGraph map[lib.FuncDescriptor][]lib.FuncDescriptor,
 	interfaces map[string]bool) {
 
-	Instrument(projectPath,
+	http.HttpRewrite(projectPath,
 		packagePattern,
 		backwardCallGraph,
 		rootFunctions,
 		interfaces,
 		instrumentationPassFileSuffix)
 
-	PropagateContext(projectPath,
+	lib.Instrument(projectPath,
+		packagePattern,
+		backwardCallGraph,
+		rootFunctions,
+		interfaces,
+		instrumentationPassFileSuffix)
+
+	lib.PropagateContext(projectPath,
 		packagePattern,
 		backwardCallGraph,
 		rootFunctions,
@@ -45,19 +57,26 @@ func ExecutePassesDumpIr(projectPath string,
 
 func ExecutePasses(projectPath string,
 	packagePattern string,
-	rootFunctions []FuncDescriptor,
-	funcDecls map[FuncDescriptor]bool,
-	backwardCallGraph map[FuncDescriptor][]FuncDescriptor,
+	rootFunctions []lib.FuncDescriptor,
+	funcDecls map[lib.FuncDescriptor]bool,
+	backwardCallGraph map[lib.FuncDescriptor][]lib.FuncDescriptor,
 	interfaces map[string]bool) {
 
-	Instrument(projectPath,
+	http.HttpRewrite(projectPath,
+		packagePattern,
+		backwardCallGraph,
+		rootFunctions,
+		interfaces,
+		instrumentationPassFileSuffix)
+
+	lib.Instrument(projectPath,
 		packagePattern,
 		backwardCallGraph,
 		rootFunctions,
 		interfaces,
 		"")
 
-	PropagateContext(projectPath,
+	lib.PropagateContext(projectPath,
 		packagePattern,
 		backwardCallGraph,
 		rootFunctions,

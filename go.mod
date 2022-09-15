@@ -1,8 +1,10 @@
-module github.com/pdelewski/autotel
+module github.com/sumologic-labs/autotel
 
 go 1.18
 
 require (
+	github.com/SumoLogic-Labs/autotel/tests/interface v0.0.0-20220915181801-dd3bccd667b1
+	github.com/pdelewski/autotel v0.2.0
 	github.com/stretchr/testify v1.8.0
 	go.opentelemetry.io/otel v1.7.0
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.7.0

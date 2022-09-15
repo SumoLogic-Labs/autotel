@@ -6,7 +6,7 @@ import (
 	"go/token"
 	"log"
 
-	"github.com/pdelewski/autotel/lib"
+	"github.com/sumologic-labs/autotel/lib"
 	"golang.org/x/tools/go/packages"
 )
 

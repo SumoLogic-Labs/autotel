@@ -20,7 +20,7 @@ import (
 	"os"
 	"strings"
 
-	alib "github.com/pdelewski/autotel/lib"
+	alib "github.com/sumologic-labs/autotel/lib"
 )
 
 func usage() {
@@ -81,7 +81,7 @@ func executeCommand(arglist []string, autotelState *AutotelState) {
 			}
 			fmt.Println("")
 
-			alib.ExecutePasses(projectPath, packagePattern, rootFunctions, funcDecls, backwardCallGraph, interfaces)
+			ExecutePasses(projectPath, packagePattern, rootFunctions, funcDecls, backwardCallGraph, interfaces)
 			fmt.Println("\tinstrumentation done")
 		} else {
 			interfaces = alib.FindInterfaces(projectPath, packagePattern)
@@ -101,7 +101,7 @@ func executeCommand(arglist []string, autotelState *AutotelState) {
 			}
 			fmt.Println("")
 
-			alib.ExecutePasses(projectPath, packagePattern, rootFunctions, funcDecls, backwardCallGraph, interfaces)
+			ExecutePasses(projectPath, packagePattern, rootFunctions, funcDecls, backwardCallGraph, interfaces)
 			fmt.Println("\tinstrumentation done")
 		}
 	}
@@ -122,7 +122,7 @@ func executeCommand(arglist []string, autotelState *AutotelState) {
 			}
 			fmt.Println("")
 
-			alib.ExecutePasses(projectPath, packagePattern, rootFunctions, funcDecls, backwardCallGraph, interfaces)
+			ExecutePasses(projectPath, packagePattern, rootFunctions, funcDecls, backwardCallGraph, interfaces)
 			fmt.Println("\tinstrumentation done")
 		} else {
 			interfaces = alib.FindInterfaces(projectPath, packagePattern)
@@ -142,7 +142,7 @@ func executeCommand(arglist []string, autotelState *AutotelState) {
 				fmt.Print(" ", v)
 			}
 			fmt.Println("")
-			alib.ExecutePassesDumpIr(projectPath, packagePattern, rootFunctions, funcDecls, backwardCallGraph, interfaces)
+			ExecutePassesDumpIr(projectPath, packagePattern, rootFunctions, funcDecls, backwardCallGraph, interfaces)
 			fmt.Println("\tinstrumentation done")
 
 		}
@@ -178,7 +178,7 @@ func executeCommand(arglist []string, autotelState *AutotelState) {
 		interfaces := alib.FindInterfaces(projectPath, packagePattern)
 		funcDecls := alib.FindFuncDecls(projectPath, packagePattern, interfaces)
 
-		alib.ExecutePasses(projectPath, packagePattern, rootFunctions, funcDecls, backwardCallGraph, interfaces)
+		ExecutePasses(projectPath, packagePattern, rootFunctions, funcDecls, backwardCallGraph, interfaces)
 	}
 	if arglist[1] == "--dumpcfg" {
 		projectPath := arglist[2]
