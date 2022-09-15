@@ -7,9 +7,13 @@ import (
 	"github.com/pdelewski/autotel/rtlib"
 )
 
-func hello(w http.ResponseWriter, req *http.Request) {
+func process() {
 
+}
+
+func hello(w http.ResponseWriter, req *http.Request) {
 	fmt.Fprintf(w, "hello\n")
+	process()
 }
 
 func main() {
