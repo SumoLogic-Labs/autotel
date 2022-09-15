@@ -35,7 +35,7 @@ func Instrument(projectPath string,
 
 	fset := token.NewFileSet()
 	fmt.Println("Instrumentation")
-	cfg := &packages.Config{Fset: fset, Mode: mode, Dir: projectPath}
+	cfg := &packages.Config{Fset: fset, Mode: LoadMode, Dir: projectPath}
 	pkgs, err := packages.Load(cfg, packagePattern)
 	if err != nil {
 		log.Fatal(err)

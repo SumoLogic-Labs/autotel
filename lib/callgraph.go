@@ -36,7 +36,7 @@ func (fd FuncDescriptor) TypeHash() string {
 	return fd.Id + fd.DeclType
 }
 
-const mode packages.LoadMode = packages.NeedName |
+const LoadMode packages.LoadMode = packages.NeedName |
 	packages.NeedTypes |
 	packages.NeedSyntax |
 	packages.NeedTypesInfo |
@@ -49,7 +49,7 @@ func FindRootFunctions(projectPath string, packagePattern string) []FuncDescript
 	var rootFunctions []FuncDescriptor
 
 	fmt.Println("FindRootFunctions")
-	cfg := &packages.Config{Fset: fset, Mode: mode, Dir: projectPath}
+	cfg := &packages.Config{Fset: fset, Mode: LoadMode, Dir: projectPath}
 	pkgs, err := packages.Load(cfg, packagePattern)
 	if err != nil {
 		log.Fatal(err)
@@ -219,7 +219,7 @@ func BuildCallGraph(
 	interfaces map[string]bool) map[FuncDescriptor][]FuncDescriptor {
 
 	fset := token.NewFileSet()
-	cfg := &packages.Config{Fset: fset, Mode: mode, Dir: projectPath}
+	cfg := &packages.Config{Fset: fset, Mode: LoadMode, Dir: projectPath}
 	pkgs, err := packages.Load(cfg, packagePattern)
 	if err != nil {
 		log.Fatal(err)
@@ -289,7 +289,7 @@ func BuildCallGraph(
 
 func FindFuncDecls(projectPath string, packagePattern string, interfaces map[string]bool) map[FuncDescriptor]bool {
 	fset := token.NewFileSet()
-	cfg := &packages.Config{Fset: fset, Mode: mode, Dir: projectPath}
+	cfg := &packages.Config{Fset: fset, Mode: LoadMode, Dir: projectPath}
 	pkgs, err := packages.Load(cfg, packagePattern)
 	if err != nil {
 		log.Fatal(err)
@@ -323,7 +323,7 @@ func FindFuncDecls(projectPath string, packagePattern string, interfaces map[str
 
 func FindInterfaces(projectPath string, packagePattern string) map[string]bool {
 	fset := token.NewFileSet()
-	cfg := &packages.Config{Fset: fset, Mode: mode, Dir: projectPath}
+	cfg := &packages.Config{Fset: fset, Mode: LoadMode, Dir: projectPath}
 	pkgs, err := packages.Load(cfg, packagePattern)
 	if err != nil {
 		log.Fatal(err)
