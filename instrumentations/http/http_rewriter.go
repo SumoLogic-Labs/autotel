@@ -28,6 +28,9 @@ func HttpRewrite(projectPath string,
 		fmt.Println("\t", pkg)
 		var node *ast.File
 		for _, node = range pkg.Syntax {
+			ast.Inspect(node, func(n ast.Node) bool {
+				return true
+			})
 		}
 	}
 }
