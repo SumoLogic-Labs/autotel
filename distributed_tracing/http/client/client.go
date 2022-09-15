@@ -12,7 +12,7 @@ import (
 
 func main() {
     rtlib.AutotelEntryPoint__()
-    req, err := http.NewRequest("GET", "http://www.yahoo.co.jp", nil)
+    req, err := http.NewRequest("GET", "http://www.google.com", nil)
     if err != nil {
 	log.Fatalf("%v", err)
     }
