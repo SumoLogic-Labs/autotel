@@ -41,7 +41,7 @@ func main() {
 	messages := make(chan string)
 
 	go func() {
-		__child_tracing_ctx, span := otel.Tracer("anonymous").Start(__tracing_ctx, "anonymous")
+		__child_tracing_ctx, span := otel.Tracer("anonymous").Start(__child_tracing_ctx, "anonymous")
 		_ = __child_tracing_ctx
 		defer span.End()
 		messages <- "ping"

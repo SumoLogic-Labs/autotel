@@ -40,12 +40,12 @@ func main() {
 	rtlib.AutotelEntryPoint__()
 	messages := make(chan string)
 
-	go func(__tracing_ctx context.Context,) {
-		__child_tracing_ctx, span := otel.Tracer("anonymous").Start(__tracing_ctx, "anonymous")
+	go func() {
+		__child_tracing_ctx, span := otel.Tracer("anonymous").Start(__child_tracing_ctx, "anonymous")
 		_ = __child_tracing_ctx
 		defer span.End()
 		messages <- "ping"
-	}(__child_tracing_ctx)
+	}()
 
 	foo(__child_tracing_ctx)
 
