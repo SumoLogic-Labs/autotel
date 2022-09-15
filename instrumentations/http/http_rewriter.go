@@ -1,4 +1,4 @@
-package http_rewriter
+package http
 
 import (
 	"fmt"
