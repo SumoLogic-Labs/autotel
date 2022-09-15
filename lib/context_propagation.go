@@ -79,12 +79,29 @@ func PropagateContext(projectPath string,
 			// below variable is used
 			// when callexpr is inside var decl
 			// instead of functiondecl
-			currentFun := "nil"
+			currentFun := FuncDescriptor{}
 
 			emitEmptyContext := func(x *ast.CallExpr, fun FuncDescriptor, ctxArg *ast.Ident) {
 				addImports = true
-				if currentFun != "nil" {
-					x.Args = append([]ast.Expr{ctxArg}, x.Args...)
+				if currentFun != (FuncDescriptor{}) {
+					visited := map[FuncDescriptor]bool{}
+					if isPath(callgraph, currentFun, rootFunctions[0], visited) {
+						x.Args = append([]ast.Expr{ctxArg}, x.Args...)
+					} else {
+						contextTodo := &ast.CallExpr{
+							Fun: &ast.SelectorExpr{
+								X: &ast.Ident{
+									Name: "context",
+								},
+								Sel: &ast.Ident{
+									Name: "TODO",
+								},
+							},
+							Lparen:   62,
+							Ellipsis: 0,
+						}
+						x.Args = append([]ast.Expr{contextTodo}, x.Args...)
+					}
 					return
 				}
 				contextTodo := &ast.CallExpr{
@@ -190,7 +207,7 @@ func PropagateContext(projectPath string,
 					funId := pkgPath + "." + pkg.TypesInfo.Defs[x.Name].Name()
 					fun := FuncDescriptor{funId,
 						pkg.TypesInfo.Defs[x.Name].Type().String()}
-					currentFun = funId
+					currentFun = fun
 					// inject context only
 					// functions available in the call graph
 					if !isFunPartOfCallGraph(fun, callgraph) {
