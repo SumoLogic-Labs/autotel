@@ -1,32 +1,25 @@
 package main
 
 import (
-    "context"
-    "fmt"
-    "log"
-    "net/http"
-    "time"
+	"fmt"
+	"log"
+	"net/http"
 
-    "github.com/pdelewski/autotel/rtlib"
+	"github.com/pdelewski/autotel/rtlib"
 )
 
 func main() {
-    rtlib.AutotelEntryPoint__()
-    req, err := http.NewRequest("GET", "http://www.google.com", nil)
-    if err != nil {
-	log.Fatalf("%v", err)
-    }
+	rtlib.AutotelEntryPoint__()
+	req, err := http.NewRequest("GET", "http://www.google.com", nil)
+	if err != nil {
+		log.Fatalf("%v", err)
+	}
 
-    ctx, cancel := context.WithTimeout(req.Context(), 1*time.Millisecond)
-    defer cancel()
+	client := http.DefaultClient
+	res, err := client.Do(req)
+	if err != nil {
+		log.Fatalf("%v", err)
+	}
 
-    req = req.WithContext(ctx)
-
-    client := http.DefaultClient
-    res, err := client.Do(req)
-    if err != nil {
-	log.Fatalf("%v", err)
-    }
-
-    fmt.Printf("%v\n", res.StatusCode)
+	fmt.Printf("%v\n", res.StatusCode)
 }
