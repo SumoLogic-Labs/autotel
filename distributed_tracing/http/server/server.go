@@ -7,22 +7,17 @@ import (
 	"github.com/pdelewski/autotel/rtlib"
 )
 
-func process() {
-
-}
-
-func hello(w http.ResponseWriter, req *http.Request) {
-	fmt.Fprintf(w, "hello\n")
-	process()
+func process(req *http.Request) {
+	fmt.Println("process hello")
 }
 
 func main() {
 	rtlib.AutotelEntryPoint__()
-	anotherHandler := func(w http.ResponseWriter, req *http.Request) {
+	helloHandler := func(w http.ResponseWriter, req *http.Request) {
+		process(req)
 	}
 
-	http.HandleFunc("/hello", hello)
-	http.HandleFunc("/another", anotherHandler)
+	http.HandleFunc("/hello", helloHandler)
 
 	http.ListenAndServe(":8090", nil)
 }
