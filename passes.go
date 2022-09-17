@@ -22,6 +22,7 @@ import (
 const (
 	contextPassFileSuffix         = "_pass_ctx.go"
 	instrumentationPassFileSuffix = "_pass_tracing.go"
+	httpPassFileSuffix            = "_pass_http.go"
 )
 
 func ExecutePassesDumpIr(projectPath string,
@@ -36,7 +37,7 @@ func ExecutePassesDumpIr(projectPath string,
 		&backwardCallGraph,
 		rootFunctions,
 		interfaces,
-		instrumentationPassFileSuffix)
+		httpPassFileSuffix)
 
 	lib.Instrument(projectPath,
 		packagePattern,
@@ -67,7 +68,7 @@ func ExecutePasses(projectPath string,
 		&backwardCallGraph,
 		rootFunctions,
 		interfaces,
-		instrumentationPassFileSuffix)
+		"")
 
 	lib.Instrument(projectPath,
 		packagePattern,
