@@ -128,7 +128,7 @@ func PropagateContext(projectPath string,
 					pkgPath := GetPkgNameFromUsesTable(pkg, ident)
 					funId := pkgPath + "." + pkg.TypesInfo.Uses[ident].Name()
 					fun := FuncDescriptor{funId,
-						pkg.TypesInfo.Uses[ident].Type().String()}
+						pkg.TypesInfo.Uses[ident].Type().String(), false}
 					found := funcDecls[fun]
 
 					// inject context parameter only
@@ -157,7 +157,7 @@ func PropagateContext(projectPath string,
 					}
 					funId := pkgPath + "." + pkg.TypesInfo.Uses[sel.Sel].Name()
 					fun := FuncDescriptor{funId,
-						pkg.TypesInfo.Uses[sel.Sel].Type().String()}
+						pkg.TypesInfo.Uses[sel.Sel].Type().String(), false}
 
 					found := funcDecls[fun]
 					// inject context parameter only
@@ -206,7 +206,7 @@ func PropagateContext(projectPath string,
 					}
 					funId := pkgPath + "." + pkg.TypesInfo.Defs[x.Name].Name()
 					fun := FuncDescriptor{funId,
-						pkg.TypesInfo.Defs[x.Name].Type().String()}
+						pkg.TypesInfo.Defs[x.Name].Type().String(), false}
 					currentFun = fun
 					// inject context only
 					// functions available in the call graph
@@ -250,7 +250,7 @@ func PropagateContext(projectPath string,
 						pkgPath := GetPkgNameFromDefsTable(pkg, method.Names[0])
 						funId := pkgPath + "." + iname.Name + "." + pkg.TypesInfo.Defs[method.Names[0]].Name()
 						fun := FuncDescriptor{funId,
-							pkg.TypesInfo.Defs[method.Names[0]].Type().String()}
+							pkg.TypesInfo.Defs[method.Names[0]].Type().String(), false}
 						if isPath(callgraph, fun, rootFunctions[0], visited) {
 							fmt.Println("\t\t\tContext Propagation InterfaceType", fun.Id, fun.DeclType)
 							addImports = true

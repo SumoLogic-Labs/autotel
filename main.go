@@ -165,9 +165,9 @@ func executeCommand(arglist []string, autotelState *AutotelState) {
 			fmt.Print("\n\t", keyValue[0])
 			for i := 1; i < len(keyValue); i++ {
 				fmt.Print(" ", keyValue[i])
-				funList = append(funList, alib.FuncDescriptor{keyValue[i], ""})
+				funList = append(funList, alib.FuncDescriptor{keyValue[i], "", false})
 			}
-			backwardCallGraph[alib.FuncDescriptor{keyValue[0], ""}] = funList
+			backwardCallGraph[alib.FuncDescriptor{keyValue[0], "", false}] = funList
 		}
 		rootFunctions := alib.InferRootFunctionsFromGraph(backwardCallGraph)
 		for _, v := range rootFunctions {

@@ -33,7 +33,7 @@ func ExecutePassesDumpIr(projectPath string,
 
 	http.HttpRewrite(projectPath,
 		packagePattern,
-		backwardCallGraph,
+		&backwardCallGraph,
 		rootFunctions,
 		interfaces,
 		instrumentationPassFileSuffix)
@@ -64,7 +64,7 @@ func ExecutePasses(projectPath string,
 
 	http.HttpRewrite(projectPath,
 		packagePattern,
-		backwardCallGraph,
+		&backwardCallGraph,
 		rootFunctions,
 		interfaces,
 		instrumentationPassFileSuffix)

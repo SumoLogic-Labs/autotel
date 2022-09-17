@@ -12,7 +12,7 @@ import (
 
 func HttpRewrite(projectPath string,
 	packagePattern string,
-	callgraph map[lib.FuncDescriptor][]lib.FuncDescriptor,
+	callgraph *map[lib.FuncDescriptor][]lib.FuncDescriptor,
 	rootFunctions []lib.FuncDescriptor,
 	interfaces map[string]bool,
 	passFileSuffix string) {
@@ -40,8 +40,9 @@ func HttpRewrite(projectPath string,
 								continue
 							}
 							fundId := pkgPath + "." + pkg.TypesInfo.Defs[ident].Name()
-							fun := lib.FuncDescriptor{fundId, pkg.TypesInfo.Defs[ident].Type().String()}
+							fun := lib.FuncDescriptor{fundId, pkg.TypesInfo.Defs[ident].Type().String(), true}
 							_ = fun
+							(*callgraph)[fun] = []lib.FuncDescriptor{}
 						}
 					}
 					for _, e := range x.Rhs {
