@@ -36,7 +36,9 @@ func HttpRewrite(projectPath string,
 							_ = ident
 							pkgPath := ""
 							pkgPath = lib.GetPkgNameFromDefsTable(pkg, ident)
-
+							if pkg.TypesInfo.Defs[ident] == nil {
+								continue
+							}
 							fundId := pkgPath + "." + pkg.TypesInfo.Defs[ident].Name()
 							fun := lib.FuncDescriptor{fundId, pkg.TypesInfo.Defs[ident].Type().String()}
 							_ = fun

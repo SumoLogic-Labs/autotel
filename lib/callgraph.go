@@ -206,6 +206,9 @@ func GetPkgNameFromUsesTable(pkg *packages.Package, ident *ast.Ident) string {
 }
 
 func GetPkgNameFromDefsTable(pkg *packages.Package, ident *ast.Ident) string {
+	if pkg.TypesInfo.Defs[ident] == nil {
+		return ""
+	}
 	if pkg.TypesInfo.Defs[ident].Pkg() != nil {
 		return pkg.TypesInfo.Defs[ident].Pkg().Path()
 	}
