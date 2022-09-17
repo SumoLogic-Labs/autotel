@@ -29,6 +29,23 @@ func HttpRewrite(projectPath string,
 		var node *ast.File
 		for _, node = range pkg.Syntax {
 			ast.Inspect(node, func(n ast.Node) bool {
+				switch x := n.(type) {
+				case *ast.AssignStmt:
+					for _, e := range x.Lhs {
+						if ident, ok := e.(*ast.Ident); ok {
+							_ = ident
+							pkgPath := ""
+							pkgPath = lib.GetPkgNameFromDefsTable(pkg, ident)
+
+							fundId := pkgPath + "." + pkg.TypesInfo.Defs[ident].Name()
+							fun := lib.FuncDescriptor{fundId, pkg.TypesInfo.Defs[ident].Type().String()}
+							_ = fun
+						}
+					}
+					for _, e := range x.Rhs {
+						_ = e
+					}
+				}
 				return true
 			})
 		}
