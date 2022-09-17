@@ -391,6 +391,7 @@ func Instrument(projectPath string,
 						}
 					}
 				case *ast.AssignStmt:
+					var isCustomInjection bool
 					for _, e := range x.Lhs {
 						if ident, ok := e.(*ast.Ident); ok {
 							_ = ident
@@ -402,14 +403,14 @@ func Instrument(projectPath string,
 							fundId := pkgPath + "." + pkg.TypesInfo.Defs[ident].Name()
 							fun := FuncDescriptor{fundId, pkg.TypesInfo.Defs[ident].Type().String(), true}
 							_ = fun
-							_, exists := callgraph[fun]
-							if exists {
-								return false
-							}
+							_, isCustomInjection = callgraph[fun]
 						}
 					}
 					for _, e := range x.Rhs {
 						if funLit, ok := e.(*ast.FuncLit); ok {
+							if isCustomInjection == true {
+								return false
+							}
 							_ = funLit
 							functionLiteralPositions = append(functionLiteralPositions, funLit.Pos())
 							s1 := &ast.ExprStmt{
