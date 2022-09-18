@@ -17,7 +17,8 @@ func main() {
 		process(req)
 	}
 
-	http.HandleFunc("/hello", helloHandler)
+	handler := http.HandlerFunc(helloHandler)
+	http.Handle("/hello", handler)
 
 	http.ListenAndServe(":8090", nil)
 }
