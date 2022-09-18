@@ -2,8 +2,10 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/pdelewski/autotel/rtlib"
 )
@@ -14,12 +16,22 @@ func main() {
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
-
 	client := http.DefaultClient
-	res, err := client.Do(req)
-	if err != nil {
-		log.Fatalf("%v", err)
-	}
+	var body []byte
 
-	fmt.Printf("%v\n", res.StatusCode)
+	err = func() error {
+		var res *http.Response
+		res, err = client.Do(req)
+		if err != nil {
+			log.Fatalf("%v", err)
+		}
+		body, err = io.ReadAll(res.Body)
+		_ = res.Body.Close()
+		fmt.Printf("%v\n", res.StatusCode)
+		return err
+	}()
+	fmt.Printf("Response Received: %s\n\n\n", body)
+	fmt.Printf("Waiting for few seconds to export spans ...\n\n")
+	time.Sleep(10 * time.Second)
+	fmt.Printf("Inspect traces on stdout\n")
 }
