@@ -19,7 +19,7 @@ func main() {
 	client := http.DefaultClient
 	var body []byte
 
-	err = func() error {
+	sendReq := func() error {
 		var res *http.Response
 		res, err = client.Do(req)
 		if err != nil {
@@ -29,7 +29,11 @@ func main() {
 		_ = res.Body.Close()
 		fmt.Printf("%v\n", res.StatusCode)
 		return err
-	}()
+	}
+	err = sendReq()
+	if err != nil {
+		log.Fatal(err)
+	}
 	fmt.Printf("Response Received: %s\n\n\n", body)
 	fmt.Printf("Waiting for few seconds to export spans ...\n\n")
 	time.Sleep(10 * time.Second)
