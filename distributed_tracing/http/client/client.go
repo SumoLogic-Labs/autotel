@@ -16,7 +16,8 @@ func main() {
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
-	client := http.DefaultClient
+	client := http.Client{}
+
 	var body []byte
 
 	sendReq := func() error {
