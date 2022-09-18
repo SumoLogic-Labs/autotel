@@ -21,10 +21,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/sumologic-labs/autotel/lib"
-	alib "github.com/sumologic-labs/autotel/lib"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/sumologic-labs/autotel/lib"
+	alib "github.com/sumologic-labs/autotel/lib"
 )
 
 var testcases = map[string]string{
@@ -63,13 +63,14 @@ func Test(t *testing.T) {
 		injectAndDumpIr(k, "./...")
 		files := lib.SearchFiles(k, ".go")
 		expectedFiles := lib.SearchFiles(v, ".go")
-
+		numOfFiles := len(files)
+		numOfComparisons := 0
 		for _, file := range files {
 
 			for _, expectedFile := range expectedFiles {
+				fmt.Println(file)
+				fmt.Println(expectedFile)
 				if filepath.Base(file) == filepath.Base(expectedFile) {
-					fmt.Println(file)
-					fmt.Println(expectedFile)
 					f1, err1 := ioutil.ReadFile(file)
 					require.NoError(t, err1)
 					f2, err2 := ioutil.ReadFile(expectedFile)
@@ -78,9 +79,12 @@ func Test(t *testing.T) {
 						fmt.Println(k)
 						failures = append(failures, k)
 					}
+					numOfComparisons = numOfComparisons + 1
 				}
 			}
-
+		}
+		if numOfFiles != numOfComparisons {
+			panic("not all files were compared")
 		}
 		lib.Revert(k)
 	}

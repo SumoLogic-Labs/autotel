@@ -633,7 +633,7 @@ func Instrument(projectPath string,
 			}
 			printer.Fprint(out, fset, node)
 			if len(passFileSuffix) > 0 {
-				os.Rename(fset.File(node.Pos()).Name(), fset.File(node.Pos()).Name()+".original")
+				os.Rename(fset.File(node.Pos()).Name(), fset.File(node.Pos()).Name()+".tmp")
 			} else {
 				os.Rename(fset.File(node.Pos()).Name()+"ir_context", fset.File(node.Pos()).Name())
 			}

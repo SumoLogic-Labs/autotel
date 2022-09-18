@@ -70,9 +70,11 @@ func FindRootFunctions(projectPath string, packagePattern string) []FuncDescript
 						}
 					}
 				case *ast.FuncDecl:
-					funId := pkg.TypesInfo.Defs[x.Name].Pkg().Path() + "." + pkg.TypesInfo.Defs[x.Name].Name()
-					currentFun = FuncDescriptor{funId, pkg.TypesInfo.Defs[x.Name].Type().String(), false}
-					fmt.Println("\t\t\tFuncDecl:", funId, pkg.TypesInfo.Defs[x.Name].Type().String())
+					if pkg.TypesInfo.Defs[x.Name] != nil {
+						funId := pkg.TypesInfo.Defs[x.Name].Pkg().Path() + "." + pkg.TypesInfo.Defs[x.Name].Name()
+						currentFun = FuncDescriptor{funId, pkg.TypesInfo.Defs[x.Name].Type().String(), false}
+						fmt.Println("\t\t\tFuncDecl:", funId, pkg.TypesInfo.Defs[x.Name].Type().String())
+					}
 				}
 				return true
 			})
@@ -313,9 +315,11 @@ func FindFuncDecls(projectPath string, packagePattern string, interfaces map[str
 					} else {
 						pkgPath = GetPkgNameFromDefsTable(pkg, x.Name)
 					}
-					funId := pkgPath + "." + pkg.TypesInfo.Defs[x.Name].Name()
-					fmt.Println("\t\t\tFuncDecl:", funId, pkg.TypesInfo.Defs[x.Name].Type().String())
-					funcDecls[FuncDescriptor{funId, pkg.TypesInfo.Defs[x.Name].Type().String(), false}] = true
+					if pkg.TypesInfo.Defs[x.Name] != nil {
+						funId := pkgPath + "." + pkg.TypesInfo.Defs[x.Name].Name()
+						fmt.Println("\t\t\tFuncDecl:", funId, pkg.TypesInfo.Defs[x.Name].Type().String())
+						funcDecls[FuncDescriptor{funId, pkg.TypesInfo.Defs[x.Name].Type().String(), false}] = true
+					}
 
 				}
 				return true
