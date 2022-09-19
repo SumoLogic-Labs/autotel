@@ -391,6 +391,7 @@ func Instrument(projectPath string,
 						}
 					}
 				case *ast.AssignStmt:
+
 					for _, e := range x.Lhs {
 						if ident, ok := e.(*ast.Ident); ok {
 							_ = ident

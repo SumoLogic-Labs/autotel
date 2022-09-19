@@ -21,7 +21,7 @@ func HttpRewrite(projectPath string,
 	passFileSuffix string) {
 
 	fset := token.NewFileSet()
-	fmt.Println("Instrumentation")
+	fmt.Println("Http Instrumentation")
 	cfg := &packages.Config{Fset: fset, Mode: lib.LoadMode, Dir: projectPath}
 	pkgs, err := packages.Load(cfg, packagePattern)
 	if err != nil {
@@ -47,17 +47,36 @@ func HttpRewrite(projectPath string,
 				printer.Fprint(out, fset, node)
 				continue
 			}
+
+			var handlerCallback *ast.Ident
+
+			ast.Inspect(node, func(n ast.Node) bool {
+				switch x := n.(type) {
+				case *ast.CallExpr:
+					if sel, ok := x.Fun.(*ast.SelectorExpr); ok {
+						if sel.Sel.Name == "HandlerFunc" && sel.X.(*ast.Ident).Name == "http" {
+							handlerCallback = x.Args[0].(*ast.Ident)
+						}
+					}
+
+				}
+				return true
+			})
+
 			ast.Inspect(node, func(n ast.Node) bool {
 				switch x := n.(type) {
 				case *ast.AssignStmt:
-					for _, e := range x.Lhs {
-						if ident, ok := e.(*ast.Ident); ok {
-							_ = ident
-							pkgPath := ""
-							pkgPath = lib.GetPkgNameFromDefsTable(pkg, ident)
-							if pkg.TypesInfo.Defs[ident] == nil {
-								continue
-							}
+					if ident, ok := x.Lhs[0].(*ast.Ident); ok {
+						_ = ident
+						pkgPath := ""
+						pkgPath = lib.GetPkgNameFromDefsTable(pkg, ident)
+						if pkg.TypesInfo.Defs[ident] == nil {
+							return false
+						}
+						if handlerCallback == nil || pkg.TypesInfo.Uses[handlerCallback] == nil {
+							return false
+						}
+						if pkg.TypesInfo.Uses[handlerCallback].Name() == pkg.TypesInfo.Defs[ident].Name() {
 							fundId := pkgPath + "." + pkg.TypesInfo.Defs[ident].Name()
 							fun := lib.FuncDescriptor{fundId, pkg.TypesInfo.Defs[ident].Type().String(), true}
 							_ = fun
