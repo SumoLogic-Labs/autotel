@@ -160,6 +160,9 @@ func HttpRewrite(projectPath string,
 							funLit.Body.List = append([]ast.Stmt{reqCtx, span, spanSupress}, funLit.Body.List...)
 							addImports = true
 							addContext = true
+							if !astutil.UsesImport(node, "go.opentelemetry.io/otel/trace") {
+								astutil.AddImport(fset, node, "go.opentelemetry.io/otel/trace")
+							}
 						}
 					}
 				}
@@ -167,12 +170,6 @@ func HttpRewrite(projectPath string,
 			})
 			ast.Inspect(node, func(n ast.Node) bool {
 				switch x := n.(type) {
-				case *ast.CallExpr:
-					if sel, ok := x.Fun.(*ast.SelectorExpr); ok {
-						if sel.Sel.Name == "HandlerFunc" && sel.X.(*ast.Ident).Name == "http" {
-
-						}
-					}
 				case *ast.FuncDecl:
 					handlerIndex := -1
 					var handlerIdent *ast.Ident
@@ -239,22 +236,101 @@ func HttpRewrite(projectPath string,
 							},
 						}
 						insert(x.Body.List, handlerIndex, otelHadlerStmt)
+						addImports = true
+						addContext = true
 					}
-
 				}
-
 				return true
 			})
+
+			ast.Inspect(node, func(n ast.Node) bool {
+				switch x := n.(type) {
+				case *ast.FuncDecl:
+					var clientVar *ast.Ident
+					clientVarIndex := -1
+					for _, body := range x.Body.List {
+						clientVarIndex = clientVarIndex + 1
+						if assignment, ok := body.(*ast.AssignStmt); ok {
+							if lit, ok := assignment.Rhs[0].(*ast.CompositeLit); ok {
+
+								if sel, ok := lit.Type.(*ast.SelectorExpr); ok {
+									if sel.Sel.Name == "Client" && sel.X.(*ast.Ident).Name == "http" {
+										clientVar = assignment.Lhs[0].(*ast.Ident)
+										break
+									}
+								}
+							}
+						}
+					}
+
+					if len(x.Body.List) > 1 && clientVar != nil {
+						copy(x.Body.List[clientVarIndex:], x.Body.List[clientVarIndex+1:])
+						x.Body.List[len(x.Body.List)-1] = nil
+						newClientVar := &ast.AssignStmt{
+							Lhs: []ast.Expr{
+								&ast.Ident{
+									Name: clientVar.Name,
+								},
+							},
+							Tok: token.DEFINE,
+							Rhs: []ast.Expr{
+								&ast.CompositeLit{
+									Type: &ast.SelectorExpr{
+										X: &ast.Ident{
+											Name: "http",
+										},
+										Sel: &ast.Ident{
+											Name: "Client",
+										},
+									},
+									Elts: []ast.Expr{
+										&ast.KeyValueExpr{
+											Key: &ast.Ident{
+												Name: "Transport",
+											},
+											Colon: 58,
+											Value: &ast.CallExpr{
+												Fun: &ast.SelectorExpr{
+													X: &ast.Ident{
+														Name: "otelhttp",
+													},
+													Sel: &ast.Ident{
+														Name: "NewTransport",
+													},
+												},
+												Lparen: 81,
+												Args: []ast.Expr{
+													&ast.SelectorExpr{
+														X: &ast.Ident{
+															Name: "http",
+														},
+														Sel: &ast.Ident{
+															Name: "DefaultTransport",
+														},
+													},
+												},
+												Ellipsis: 0,
+											},
+										},
+									},
+									Incomplete: false,
+								},
+							},
+						}
+						insert(x.Body.List, clientVarIndex, newClientVar)
+						addImports = true
+						addContext = true
+					}
+				}
+				return true
+			})
+
 			if addContext {
 				if !astutil.UsesImport(node, "context") {
 					astutil.AddImport(fset, node, "context")
 				}
 			}
 			if addImports {
-				if !astutil.UsesImport(node, "go.opentelemetry.io/otel/trace") {
-					astutil.AddImport(fset, node, "go.opentelemetry.io/otel/trace")
-				}
-
 				if !astutil.UsesImport(node, "go.opentelemetry.io/otel") {
 					astutil.AddNamedImport(fset, node, "otel", "go.opentelemetry.io/otel")
 				}
