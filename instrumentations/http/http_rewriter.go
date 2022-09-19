@@ -156,6 +156,14 @@ func HttpRewrite(projectPath string,
 				}
 				return true
 			})
+			ast.Inspect(node, func(n ast.Node) bool {
+				switch x := n.(type) {
+				case *ast.CallExpr:
+					_ = x
+				}
+
+				return true
+			})
 			if addContext {
 				if !astutil.UsesImport(node, "context") {
 					astutil.AddImport(fset, node, "context")
