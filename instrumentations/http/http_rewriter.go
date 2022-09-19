@@ -13,6 +13,15 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
+func insert(a []ast.Stmt, index int, value ast.Stmt) []ast.Stmt {
+	if len(a) == index { // nil or empty slice or after last element
+		return append(a, value)
+	}
+	a = append(a[:index+1], a[index:]...) // index < len(a)
+	a[index] = value
+	return a
+}
+
 func HttpRewrite(projectPath string,
 	packagePattern string,
 	callgraph *map[lib.FuncDescriptor][]lib.FuncDescriptor,
@@ -159,7 +168,79 @@ func HttpRewrite(projectPath string,
 			ast.Inspect(node, func(n ast.Node) bool {
 				switch x := n.(type) {
 				case *ast.CallExpr:
-					_ = x
+					if sel, ok := x.Fun.(*ast.SelectorExpr); ok {
+						if sel.Sel.Name == "HandlerFunc" && sel.X.(*ast.Ident).Name == "http" {
+
+						}
+					}
+				case *ast.FuncDecl:
+					handlerIndex := -1
+					var handlerIdent *ast.Ident
+					for _, body := range x.Body.List {
+						handlerIndex = handlerIndex + 1
+						if assignment, ok := body.(*ast.AssignStmt); ok {
+							handlerIdent = assignment.Lhs[0].(*ast.Ident)
+							if call, ok := assignment.Rhs[0].(*ast.CallExpr); ok {
+								if sel, ok := call.Fun.(*ast.SelectorExpr); ok {
+									if sel.Sel.Name == "HandlerFunc" && sel.X.(*ast.Ident).Name == "http" {
+										handlerCallback = call.Args[0].(*ast.Ident)
+										break
+									}
+								}
+							}
+						}
+					}
+
+					if len(x.Body.List) > 1 && handlerCallback != nil {
+						copy(x.Body.List[handlerIndex:], x.Body.List[handlerIndex+1:])
+						x.Body.List[len(x.Body.List)-1] = nil
+						otelHadlerStmt := &ast.AssignStmt{
+							Lhs: []ast.Expr{
+								&ast.Ident{
+									Name: handlerIdent.Name,
+								},
+							},
+							Tok: token.DEFINE,
+							Rhs: []ast.Expr{
+								&ast.CallExpr{
+									Fun: &ast.SelectorExpr{
+										X: &ast.Ident{
+											Name: "otelhttp",
+										},
+										Sel: &ast.Ident{
+											Name: "NewHandler",
+										},
+									},
+									Lparen: 61,
+									Args: []ast.Expr{
+										&ast.CallExpr{
+											Fun: &ast.SelectorExpr{
+												X: &ast.Ident{
+													Name: "http",
+												},
+												Sel: &ast.Ident{
+													Name: "HandlerFunc",
+												},
+											},
+											Lparen: 78,
+											Args: []ast.Expr{
+												&ast.Ident{
+													Name: handlerCallback.Name,
+												},
+											},
+											Ellipsis: 0,
+										},
+										&ast.Ident{
+											Name: `"` + handlerCallback.Name + `"`,
+										},
+									},
+									Ellipsis: 0,
+								},
+							},
+						}
+						insert(x.Body.List, handlerIndex, otelHadlerStmt)
+					}
+
 				}
 
 				return true
@@ -176,6 +257,9 @@ func HttpRewrite(projectPath string,
 
 				if !astutil.UsesImport(node, "go.opentelemetry.io/otel") {
 					astutil.AddNamedImport(fset, node, "otel", "go.opentelemetry.io/otel")
+				}
+				if !astutil.UsesImport(node, "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp") {
+					astutil.AddImport(fset, node, "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp")
 				}
 			}
 			printer.Fprint(out, fset, node)
