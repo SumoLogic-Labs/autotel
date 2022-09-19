@@ -168,19 +168,19 @@ func HttpRewrite(projectPath string,
 				}
 				return true
 			})
+			var handlerIdent *ast.Ident
 			ast.Inspect(node, func(n ast.Node) bool {
 				switch x := n.(type) {
 				case *ast.FuncDecl:
 					handlerIndex := -1
-					var handlerIdent *ast.Ident
 					for _, body := range x.Body.List {
 						handlerIndex = handlerIndex + 1
 						if assignment, ok := body.(*ast.AssignStmt); ok {
-							handlerIdent = assignment.Lhs[0].(*ast.Ident)
 							if call, ok := assignment.Rhs[0].(*ast.CallExpr); ok {
 								if sel, ok := call.Fun.(*ast.SelectorExpr); ok {
 									if sel.Sel.Name == "HandlerFunc" && sel.X.(*ast.Ident).Name == "http" {
 										handlerCallback = call.Args[0].(*ast.Ident)
+										handlerIdent = assignment.Lhs[0].(*ast.Ident)
 										break
 									}
 								}
@@ -188,7 +188,7 @@ func HttpRewrite(projectPath string,
 						}
 					}
 
-					if len(x.Body.List) > 1 && handlerCallback != nil {
+					if len(x.Body.List) > 1 && handlerCallback != nil && handlerIdent != nil {
 						copy(x.Body.List[handlerIndex:], x.Body.List[handlerIndex+1:])
 						x.Body.List[len(x.Body.List)-1] = nil
 						otelHadlerStmt := &ast.AssignStmt{
@@ -252,7 +252,6 @@ func HttpRewrite(projectPath string,
 						clientVarIndex = clientVarIndex + 1
 						if assignment, ok := body.(*ast.AssignStmt); ok {
 							if lit, ok := assignment.Rhs[0].(*ast.CompositeLit); ok {
-
 								if sel, ok := lit.Type.(*ast.SelectorExpr); ok {
 									if sel.Sel.Name == "Client" && sel.X.(*ast.Ident).Name == "http" {
 										clientVar = assignment.Lhs[0].(*ast.Ident)
