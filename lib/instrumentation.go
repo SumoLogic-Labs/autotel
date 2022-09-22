@@ -387,7 +387,6 @@ func Instrument(projectPath string,
 							x.Body.List = append([]ast.Stmt{s2, s3, s4, s5, s6, childTracingSupress, s8}, x.Body.List...)
 							addContext = true
 							addImports = true
-
 						}
 					}
 				case *ast.AssignStmt:
@@ -617,7 +616,6 @@ func Instrument(projectPath string,
 					x.Body.List = append([]ast.Stmt{s2, s3, s4}, x.Body.List...)
 					addImports = true
 					addContext = true
-
 				}
 
 				return true
