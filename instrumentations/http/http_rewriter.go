@@ -87,7 +87,10 @@ func HttpRewrite(projectPath string,
 						}
 						if pkg.TypesInfo.Uses[handlerCallback].Name() == pkg.TypesInfo.Defs[ident].Name() {
 							fundId := pkgPath + "." + pkg.TypesInfo.Defs[ident].Name()
-							fun := lib.FuncDescriptor{fundId, pkg.TypesInfo.Defs[ident].Type().String(), true}
+							fun := lib.FuncDescriptor{
+								Id:              fundId,
+								DeclType:        pkg.TypesInfo.Defs[ident].Type().String(),
+								CustomInjection: true}
 							_ = fun
 							(*callgraph)[fun] = []lib.FuncDescriptor{}
 						}

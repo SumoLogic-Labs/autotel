@@ -91,7 +91,10 @@ func Instrument(projectPath string,
 						pkgPath = GetPkgNameFromDefsTable(pkg, x.Name)
 					}
 					fundId := pkgPath + "." + pkg.TypesInfo.Defs[x.Name].Name()
-					fun := FuncDescriptor{fundId, pkg.TypesInfo.Defs[x.Name].Type().String(), false}
+					fun := FuncDescriptor{
+						Id:              fundId,
+						DeclType:        pkg.TypesInfo.Defs[x.Name].Type().String(),
+						CustomInjection: false}
 					// check if it's root function or
 					// one of function in call graph
 					// and emit proper ast nodes
@@ -400,7 +403,10 @@ func Instrument(projectPath string,
 								return false
 							}
 							fundId := pkgPath + "." + pkg.TypesInfo.Defs[ident].Name()
-							fun := FuncDescriptor{fundId, pkg.TypesInfo.Defs[ident].Type().String(), true}
+							fun := FuncDescriptor{
+								Id:              fundId,
+								DeclType:        pkg.TypesInfo.Defs[ident].Type().String(),
+								CustomInjection: true}
 							_, exists := callgraph[fun]
 							if exists {
 								return false

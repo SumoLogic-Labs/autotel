@@ -127,8 +127,10 @@ func PropagateContext(projectPath string,
 					}
 					pkgPath := GetPkgNameFromUsesTable(pkg, ident)
 					funId := pkgPath + "." + pkg.TypesInfo.Uses[ident].Name()
-					fun := FuncDescriptor{funId,
-						pkg.TypesInfo.Uses[ident].Type().String(), false}
+					fun := FuncDescriptor{
+						Id:              funId,
+						DeclType:        pkg.TypesInfo.Uses[ident].Type().String(),
+						CustomInjection: false}
 					found := funcDecls[fun]
 
 					// inject context parameter only
@@ -156,8 +158,10 @@ func PropagateContext(projectPath string,
 						pkgPath = GetSelectorPkgPath(sel, pkg, pkgPath)
 					}
 					funId := pkgPath + "." + pkg.TypesInfo.Uses[sel.Sel].Name()
-					fun := FuncDescriptor{funId,
-						pkg.TypesInfo.Uses[sel.Sel].Type().String(), false}
+					fun := FuncDescriptor{
+						Id:              funId,
+						DeclType:        pkg.TypesInfo.Uses[sel.Sel].Type().String(),
+						CustomInjection: false}
 
 					found := funcDecls[fun]
 					// inject context parameter only
@@ -205,8 +209,10 @@ func PropagateContext(projectPath string,
 						pkgPath = GetPkgNameFromDefsTable(pkg, x.Name)
 					}
 					funId := pkgPath + "." + pkg.TypesInfo.Defs[x.Name].Name()
-					fun := FuncDescriptor{funId,
-						pkg.TypesInfo.Defs[x.Name].Type().String(), false}
+					fun := FuncDescriptor{
+						Id:              funId,
+						DeclType:        pkg.TypesInfo.Defs[x.Name].Type().String(),
+						CustomInjection: false}
 					currentFun = fun
 					// inject context only
 					// functions available in the call graph
@@ -249,8 +255,10 @@ func PropagateContext(projectPath string,
 						visited := map[FuncDescriptor]bool{}
 						pkgPath := GetPkgNameFromDefsTable(pkg, method.Names[0])
 						funId := pkgPath + "." + iname.Name + "." + pkg.TypesInfo.Defs[method.Names[0]].Name()
-						fun := FuncDescriptor{funId,
-							pkg.TypesInfo.Defs[method.Names[0]].Type().String(), false}
+						fun := FuncDescriptor{
+							Id:              funId,
+							DeclType:        pkg.TypesInfo.Defs[method.Names[0]].Type().String(),
+							CustomInjection: false}
 						if isPath(callgraph, fun, rootFunctions[0], visited) {
 							fmt.Println("\t\t\tContext Propagation InterfaceType", fun.Id, fun.DeclType)
 							addImports = true
