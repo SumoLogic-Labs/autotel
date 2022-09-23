@@ -79,4 +79,11 @@ func Revert(path string) {
 	for _, file := range files {
 		os.Remove(file)
 	}
+	originalExt := ".original"
+	files = SearchFiles(path, originalExt, goExt)
+	for _, file := range files {
+		newFile := file[:len(file)-(len(goExt)+len(originalExt))]
+		os.Rename(file, newFile+".go")
+	}
+
 }
