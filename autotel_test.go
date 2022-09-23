@@ -53,17 +53,17 @@ func injectAndDumpIr(root string, packagePattern string) {
 		fmt.Print(" ", v)
 	}
 	fmt.Println("")
-
-	ExecutePassesDumpIr(root, packagePattern, rootFunctions, funcDecls, backwardCallGraph, interfaces)
+	analysis := &alib.Analysis{root, packagePattern, rootFunctions, funcDecls, backwardCallGraph, interfaces}
+	ExecutePassesDumpIr(analysis)
 }
 
 func Test(t *testing.T) {
 
 	for k, v := range testcases {
 		injectAndDumpIr(k, "./...")
-		files := lib.SearchFiles(k, ".go")
-		expectedFiles := lib.SearchFiles(v, ".go")
-		numOfFiles := len(files)
+		files := lib.SearchFiles(k, "_pass", ".go")
+		expectedFiles := lib.SearchFiles(v, "_pass", ".go")
+		numOfFiles := len(expectedFiles)
 		numOfComparisons := 0
 		for _, file := range files {
 

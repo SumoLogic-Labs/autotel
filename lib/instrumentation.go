@@ -17,512 +17,379 @@ package lib
 import (
 	"fmt"
 	"go/ast"
-	"go/printer"
 	"go/token"
-	"log"
-	"os"
 
 	"golang.org/x/tools/go/ast/astutil"
 	"golang.org/x/tools/go/packages"
 )
 
-func Instrument(projectPath string,
-	packagePattern string,
-	callgraph map[FuncDescriptor][]FuncDescriptor,
-	rootFunctions []FuncDescriptor,
-	interfaces map[string]bool,
-	passFileSuffix string) {
+type InstrumentationPass struct {
+}
 
-	fset := token.NewFileSet()
-	fmt.Println("Instrumentation")
-	cfg := &packages.Config{Fset: fset, Mode: LoadMode, Dir: projectPath}
-	pkgs, err := packages.Load(cfg, packagePattern)
-	if err != nil {
-		log.Fatal(err)
+func (pass *InstrumentationPass) Execute(
+	node *ast.File,
+	analysis *Analysis,
+	pkg *packages.Package,
+	pkgs []*packages.Package) []Import {
+	var imports []Import
+	addImports := false
+	addContext := false
+
+	childTracingSupress := &ast.AssignStmt{
+		Lhs: []ast.Expr{
+			&ast.Ident{
+				Name: "_",
+			},
+		},
+		Tok: token.ASSIGN,
+		Rhs: []ast.Expr{
+			&ast.Ident{
+				Name: "__child_tracing_ctx",
+			},
+		},
 	}
-	for _, pkg := range pkgs {
-		fmt.Println("\t", pkg)
-		var node *ast.File
-		for _, node = range pkg.Syntax {
-			addImports := false
-			addContext := false
+	// store all function literals positions
+	// that are part of assignment statement
+	// it's used to avoid injection into literal
+	// more than once
+	var functionLiteralPositions []token.Pos
+	ast.Inspect(node, func(n ast.Node) bool {
 
-			var out *os.File
-			fmt.Println("\t\t", fset.File(node.Pos()).Name())
-			if len(passFileSuffix) > 0 {
-				out, _ = os.Create(fset.File(node.Pos()).Name() + passFileSuffix)
-				defer out.Close()
+		switch x := n.(type) {
+		case *ast.FuncDecl:
+			pkgPath := ""
+
+			if x.Recv != nil {
+				pkgPath = GetPackagePathHashFromFunc(pkg, pkgs, x, analysis.Interfaces)
 			} else {
-				out, _ = os.Create(fset.File(node.Pos()).Name() + "ir_context")
-				defer out.Close()
+				pkgPath = GetPkgNameFromDefsTable(pkg, x.Name)
 			}
-			if len(rootFunctions) == 0 {
-				printer.Fprint(out, fset, node)
-				continue
+			fundId := pkgPath + "." + pkg.TypesInfo.Defs[x.Name].Name()
+			fun := FuncDescriptor{
+				Id:              fundId,
+				DeclType:        pkg.TypesInfo.Defs[x.Name].Type().String(),
+				CustomInjection: false}
+			// check if it's root function or
+			// one of function in call graph
+			// and emit proper ast nodes
+			_, exists := analysis.Callgraph[fun]
+			if !exists {
+				if !Contains(analysis.RootFunctions, fun) {
+					return false
+				}
 			}
 
-			childTracingSupress := &ast.AssignStmt{
-				Lhs: []ast.Expr{
-					&ast.Ident{
-						Name: "_",
-					},
-				},
-				Tok: token.ASSIGN,
-				Rhs: []ast.Expr{
-					&ast.Ident{
-						Name: "__child_tracing_ctx",
-					},
-				},
-			}
-			// store all function literals positions
-			// that are part of assignment statement
-			// it's used to avoid injection into literal
-			// more than once
-			var functionLiteralPositions []token.Pos
-			ast.Inspect(node, func(n ast.Node) bool {
-
-				switch x := n.(type) {
-				case *ast.FuncDecl:
-					pkgPath := ""
-
-					if x.Recv != nil {
-						pkgPath = GetPackagePathHashFromFunc(pkg, pkgs, x, interfaces)
-					} else {
-						pkgPath = GetPkgNameFromDefsTable(pkg, x.Name)
-					}
-					fundId := pkgPath + "." + pkg.TypesInfo.Defs[x.Name].Name()
-					fun := FuncDescriptor{
-						Id:              fundId,
-						DeclType:        pkg.TypesInfo.Defs[x.Name].Type().String(),
-						CustomInjection: false}
-					// check if it's root function or
-					// one of function in call graph
-					// and emit proper ast nodes
-					_, exists := callgraph[fun]
-					if !exists {
-						if !Contains(rootFunctions, fun) {
-							return false
-						}
-					}
-
-					for _, root := range rootFunctions {
-						visited := map[FuncDescriptor]bool{}
-						fmt.Println("\t\t\tInstrumentation FuncDecl:", fundId, pkg.TypesInfo.Defs[x.Name].Type().String())
-						if isPath(callgraph, fun, root, visited) && fun.TypeHash() != root.TypeHash() {
-							s1 := &ast.ExprStmt{
-								X: &ast.CallExpr{
-									Fun: &ast.SelectorExpr{
-										X: &ast.Ident{
-											Name: "fmt",
-										},
-										Sel: &ast.Ident{
-											Name: "Println",
-										},
-									},
-									Args: []ast.Expr{
-										&ast.BasicLit{
-											Kind:  token.STRING,
-											Value: `"child instrumentation"`,
-										},
-									},
+			for _, root := range analysis.RootFunctions {
+				visited := map[FuncDescriptor]bool{}
+				fmt.Println("\t\t\tInstrumentation FuncDecl:", fundId, pkg.TypesInfo.Defs[x.Name].Type().String())
+				if isPath(analysis.Callgraph, fun, root, visited) && fun.TypeHash() != root.TypeHash() {
+					s1 := &ast.ExprStmt{
+						X: &ast.CallExpr{
+							Fun: &ast.SelectorExpr{
+								X: &ast.Ident{
+									Name: "fmt",
 								},
-							}
-							s2 := &ast.AssignStmt{
-								Lhs: []ast.Expr{
-									&ast.Ident{
-										Name: "__child_tracing_ctx",
-									},
-									&ast.Ident{
-										Name: "span",
-									},
+								Sel: &ast.Ident{
+									Name: "Println",
 								},
-								Tok: token.DEFINE,
-								Rhs: []ast.Expr{
-									&ast.CallExpr{
+							},
+							Args: []ast.Expr{
+								&ast.BasicLit{
+									Kind:  token.STRING,
+									Value: `"child instrumentation"`,
+								},
+							},
+						},
+					}
+					s2 := &ast.AssignStmt{
+						Lhs: []ast.Expr{
+							&ast.Ident{
+								Name: "__child_tracing_ctx",
+							},
+							&ast.Ident{
+								Name: "span",
+							},
+						},
+						Tok: token.DEFINE,
+						Rhs: []ast.Expr{
+							&ast.CallExpr{
+								Fun: &ast.SelectorExpr{
+									X: &ast.CallExpr{
 										Fun: &ast.SelectorExpr{
-											X: &ast.CallExpr{
-												Fun: &ast.SelectorExpr{
-													X: &ast.Ident{
-														Name: "otel",
-													},
-													Sel: &ast.Ident{
-														Name: "Tracer",
-													},
-												},
-												Lparen: 50,
-												Args: []ast.Expr{
-													&ast.Ident{
-														Name: `"` + x.Name.Name + `"`,
-													},
-												},
-												Ellipsis: 0,
+											X: &ast.Ident{
+												Name: "otel",
 											},
 											Sel: &ast.Ident{
-												Name: "Start",
+												Name: "Tracer",
 											},
 										},
-										Lparen: 62,
+										Lparen: 50,
 										Args: []ast.Expr{
-											&ast.Ident{
-												Name: "__tracing_ctx",
-											},
 											&ast.Ident{
 												Name: `"` + x.Name.Name + `"`,
 											},
 										},
 										Ellipsis: 0,
 									},
+									Sel: &ast.Ident{
+										Name: "Start",
+									},
 								},
-							}
-
-							s3 := &ast.AssignStmt{
-								Lhs: []ast.Expr{
+								Lparen: 62,
+								Args: []ast.Expr{
 									&ast.Ident{
-										Name: "_",
+										Name: "__tracing_ctx",
 									},
-								},
-								Tok: token.ASSIGN,
-								Rhs: []ast.Expr{
 									&ast.Ident{
-										Name: "__child_tracing_ctx",
+										Name: `"` + x.Name.Name + `"`,
 									},
 								},
-							}
+								Ellipsis: 0,
+							},
+						},
+					}
 
-							s4 := &ast.DeferStmt{
-								Defer: 27,
-								Call: &ast.CallExpr{
-									Fun: &ast.SelectorExpr{
-										X: &ast.Ident{
-											Name: "span",
-										},
-										Sel: &ast.Ident{
-											Name: "End",
-										},
-									},
-									Lparen:   41,
-									Ellipsis: 0,
+					s3 := &ast.AssignStmt{
+						Lhs: []ast.Expr{
+							&ast.Ident{
+								Name: "_",
+							},
+						},
+						Tok: token.ASSIGN,
+						Rhs: []ast.Expr{
+							&ast.Ident{
+								Name: "__child_tracing_ctx",
+							},
+						},
+					}
+
+					s4 := &ast.DeferStmt{
+						Defer: 27,
+						Call: &ast.CallExpr{
+							Fun: &ast.SelectorExpr{
+								X: &ast.Ident{
+									Name: "span",
 								},
-							}
-							_ = s1
-							x.Body.List = append([]ast.Stmt{s2, s3, s4}, x.Body.List...)
-							addContext = true
-							addImports = true
-						} else {
-							// check whether this function is root function
-							if !Contains(rootFunctions, fun) {
-								return false
-							}
-							s1 := &ast.ExprStmt{
-								X: &ast.CallExpr{
-									Fun: &ast.SelectorExpr{
-										X: &ast.Ident{
-											Name: "fmt",
-										},
-										Sel: &ast.Ident{
-											Name: "Println",
-										},
-									},
-									Args: []ast.Expr{
-										&ast.BasicLit{
-											Kind:  token.STRING,
-											Value: `"root instrumentation"`,
-										},
-									},
+								Sel: &ast.Ident{
+									Name: "End",
 								},
-							}
+							},
+							Lparen:   41,
+							Ellipsis: 0,
+						},
+					}
+					_ = s1
+					x.Body.List = append([]ast.Stmt{s2, s3, s4}, x.Body.List...)
+					addContext = true
+					addImports = true
+				} else {
+					// check whether this function is root function
+					if !Contains(analysis.RootFunctions, fun) {
+						return false
+					}
+					s1 := &ast.ExprStmt{
+						X: &ast.CallExpr{
+							Fun: &ast.SelectorExpr{
+								X: &ast.Ident{
+									Name: "fmt",
+								},
+								Sel: &ast.Ident{
+									Name: "Println",
+								},
+							},
+							Args: []ast.Expr{
+								&ast.BasicLit{
+									Kind:  token.STRING,
+									Value: `"root instrumentation"`,
+								},
+							},
+						},
+					}
 
-							s2 :=
-								&ast.AssignStmt{
-									Lhs: []ast.Expr{
-										&ast.Ident{
-											Name: "ts",
-										},
-									},
-									Tok: token.DEFINE,
+					s2 :=
+						&ast.AssignStmt{
+							Lhs: []ast.Expr{
+								&ast.Ident{
+									Name: "ts",
+								},
+							},
+							Tok: token.DEFINE,
 
-									Rhs: []ast.Expr{
-										&ast.CallExpr{
-											Fun: &ast.SelectorExpr{
-												X: &ast.Ident{
-													Name: "rtlib",
-												},
-												Sel: &ast.Ident{
-													Name: "NewTracingState",
-												},
-											},
-											Lparen:   54,
-											Ellipsis: 0,
-										},
-									},
-								}
-							s3 := &ast.DeferStmt{
-								Defer: 27,
-								Call: &ast.CallExpr{
+							Rhs: []ast.Expr{
+								&ast.CallExpr{
 									Fun: &ast.SelectorExpr{
 										X: &ast.Ident{
 											Name: "rtlib",
 										},
 										Sel: &ast.Ident{
-											Name: "Shutdown",
+											Name: "NewTracingState",
 										},
 									},
-									Lparen: 48,
-									Args: []ast.Expr{
-										&ast.Ident{
-											Name: "ts",
-										},
-									},
+									Lparen:   54,
 									Ellipsis: 0,
 								},
-							}
+							},
+						}
+					s3 := &ast.DeferStmt{
+						Defer: 27,
+						Call: &ast.CallExpr{
+							Fun: &ast.SelectorExpr{
+								X: &ast.Ident{
+									Name: "rtlib",
+								},
+								Sel: &ast.Ident{
+									Name: "Shutdown",
+								},
+							},
+							Lparen: 48,
+							Args: []ast.Expr{
+								&ast.Ident{
+									Name: "ts",
+								},
+							},
+							Ellipsis: 0,
+						},
+					}
 
-							s4 := &ast.ExprStmt{
-								X: &ast.CallExpr{
-									Fun: &ast.SelectorExpr{
-										X: &ast.Ident{
-											Name: "otel",
-										},
-										Sel: &ast.Ident{
-											Name: "SetTracerProvider",
-										},
-									},
-									Lparen: 49,
-									Args: []ast.Expr{
-										&ast.SelectorExpr{
-											X: &ast.Ident{
-												Name: "ts",
-											},
-											Sel: &ast.Ident{
-												Name: "Tp",
-											},
-										},
-									},
-									Ellipsis: 0,
+					s4 := &ast.ExprStmt{
+						X: &ast.CallExpr{
+							Fun: &ast.SelectorExpr{
+								X: &ast.Ident{
+									Name: "otel",
 								},
-							}
-							s5 := &ast.AssignStmt{
-								Lhs: []ast.Expr{
-									&ast.Ident{
-										Name: "ctx",
+								Sel: &ast.Ident{
+									Name: "SetTracerProvider",
+								},
+							},
+							Lparen: 49,
+							Args: []ast.Expr{
+								&ast.SelectorExpr{
+									X: &ast.Ident{
+										Name: "ts",
+									},
+									Sel: &ast.Ident{
+										Name: "Tp",
 									},
 								},
-								Tok: token.DEFINE,
-								Rhs: []ast.Expr{
-									&ast.CallExpr{
+							},
+							Ellipsis: 0,
+						},
+					}
+					s5 := &ast.AssignStmt{
+						Lhs: []ast.Expr{
+							&ast.Ident{
+								Name: "ctx",
+							},
+						},
+						Tok: token.DEFINE,
+						Rhs: []ast.Expr{
+							&ast.CallExpr{
+								Fun: &ast.SelectorExpr{
+									X: &ast.Ident{
+										Name: "context",
+									},
+									Sel: &ast.Ident{
+										Name: "Background",
+									},
+								},
+								Lparen:   52,
+								Ellipsis: 0,
+							},
+						},
+					}
+					s6 := &ast.AssignStmt{
+						Lhs: []ast.Expr{
+							&ast.Ident{
+								Name: "__child_tracing_ctx",
+							},
+							&ast.Ident{
+								Name: "span",
+							},
+						},
+						Tok: token.DEFINE,
+						Rhs: []ast.Expr{
+							&ast.CallExpr{
+								Fun: &ast.SelectorExpr{
+									X: &ast.CallExpr{
 										Fun: &ast.SelectorExpr{
 											X: &ast.Ident{
-												Name: "context",
+												Name: "otel",
 											},
 											Sel: &ast.Ident{
-												Name: "Background",
+												Name: "Tracer",
 											},
 										},
-										Lparen:   52,
-										Ellipsis: 0,
-									},
-								},
-							}
-							s6 := &ast.AssignStmt{
-								Lhs: []ast.Expr{
-									&ast.Ident{
-										Name: "__child_tracing_ctx",
-									},
-									&ast.Ident{
-										Name: "span",
-									},
-								},
-								Tok: token.DEFINE,
-								Rhs: []ast.Expr{
-									&ast.CallExpr{
-										Fun: &ast.SelectorExpr{
-											X: &ast.CallExpr{
-												Fun: &ast.SelectorExpr{
-													X: &ast.Ident{
-														Name: "otel",
-													},
-													Sel: &ast.Ident{
-														Name: "Tracer",
-													},
-												},
-												Lparen: 50,
-												Args: []ast.Expr{
-													&ast.Ident{
-														Name: `"` + x.Name.Name + `"`,
-													},
-												},
-												Ellipsis: 0,
-											},
-											Sel: &ast.Ident{
-												Name: "Start",
-											},
-										},
-										Lparen: 62,
+										Lparen: 50,
 										Args: []ast.Expr{
-											&ast.Ident{
-												Name: "ctx",
-											},
 											&ast.Ident{
 												Name: `"` + x.Name.Name + `"`,
 											},
 										},
 										Ellipsis: 0,
 									},
-								},
-							}
-
-							s8 := &ast.DeferStmt{
-								Defer: 27,
-								Call: &ast.CallExpr{
-									Fun: &ast.SelectorExpr{
-										X: &ast.Ident{
-											Name: "span",
-										},
-										Sel: &ast.Ident{
-											Name: "End",
-										},
-									},
-									Lparen:   41,
-									Ellipsis: 0,
-								},
-							}
-							_ = s1
-							x.Body.List = append([]ast.Stmt{s2, s3, s4, s5, s6, childTracingSupress, s8}, x.Body.List...)
-							addContext = true
-							addImports = true
-						}
-					}
-				case *ast.AssignStmt:
-
-					for _, e := range x.Lhs {
-						if ident, ok := e.(*ast.Ident); ok {
-							_ = ident
-							pkgPath := ""
-							pkgPath = GetPkgNameFromDefsTable(pkg, ident)
-							if pkg.TypesInfo.Defs[ident] == nil {
-								return false
-							}
-							fundId := pkgPath + "." + pkg.TypesInfo.Defs[ident].Name()
-							fun := FuncDescriptor{
-								Id:              fundId,
-								DeclType:        pkg.TypesInfo.Defs[ident].Type().String(),
-								CustomInjection: true}
-							_, exists := callgraph[fun]
-							if exists {
-								return false
-							}
-						}
-					}
-					for _, e := range x.Rhs {
-						if funLit, ok := e.(*ast.FuncLit); ok {
-							functionLiteralPositions = append(functionLiteralPositions, funLit.Pos())
-							s1 := &ast.ExprStmt{
-								X: &ast.CallExpr{
-									Fun: &ast.SelectorExpr{
-										X: &ast.Ident{
-											Name: "fmt",
-										},
-										Sel: &ast.Ident{
-											Name: "Println",
-										},
-									},
-									Args: []ast.Expr{
-										&ast.BasicLit{
-											Kind:  token.STRING,
-											Value: `"child instrumentation"`,
-										},
+									Sel: &ast.Ident{
+										Name: "Start",
 									},
 								},
-							}
-							s2 := &ast.AssignStmt{
-								Lhs: []ast.Expr{
+								Lparen: 62,
+								Args: []ast.Expr{
 									&ast.Ident{
-										Name: "__child_tracing_ctx",
+										Name: "ctx",
 									},
 									&ast.Ident{
-										Name: "span",
+										Name: `"` + x.Name.Name + `"`,
 									},
 								},
-								Tok: token.DEFINE,
-								Rhs: []ast.Expr{
-									&ast.CallExpr{
-										Fun: &ast.SelectorExpr{
-											X: &ast.CallExpr{
-												Fun: &ast.SelectorExpr{
-													X: &ast.Ident{
-														Name: "otel",
-													},
-													Sel: &ast.Ident{
-														Name: "Tracer",
-													},
-												},
-												Lparen: 50,
-												Args: []ast.Expr{
-													&ast.Ident{
-														Name: `"` + "anonymous" + `"`,
-													},
-												},
-												Ellipsis: 0,
-											},
-											Sel: &ast.Ident{
-												Name: "Start",
-											},
-										},
-										Lparen: 62,
-										Args: []ast.Expr{
-											&ast.Ident{
-												Name: "__child_tracing_ctx",
-											},
-											&ast.Ident{
-												Name: `"` + "anonymous" + `"`,
-											},
-										},
-										Ellipsis: 0,
-									},
-								},
-							}
-
-							s3 := &ast.AssignStmt{
-								Lhs: []ast.Expr{
-									&ast.Ident{
-										Name: "_",
-									},
-								},
-								Tok: token.ASSIGN,
-								Rhs: []ast.Expr{
-									&ast.Ident{
-										Name: "__child_tracing_ctx",
-									},
-								},
-							}
-
-							s4 := &ast.DeferStmt{
-								Defer: 27,
-								Call: &ast.CallExpr{
-									Fun: &ast.SelectorExpr{
-										X: &ast.Ident{
-											Name: "span",
-										},
-										Sel: &ast.Ident{
-											Name: "End",
-										},
-									},
-									Lparen:   41,
-									Ellipsis: 0,
-								},
-							}
-							_ = s1
-							funLit.Body.List = append([]ast.Stmt{s2, s3, s4}, funLit.Body.List...)
-							addImports = true
-							addContext = true
-						}
+								Ellipsis: 0,
+							},
+						},
 					}
-				case *ast.FuncLit:
-					for _, pos := range functionLiteralPositions {
-						if pos == x.Pos() {
-							return false
-						}
+
+					s8 := &ast.DeferStmt{
+						Defer: 27,
+						Call: &ast.CallExpr{
+							Fun: &ast.SelectorExpr{
+								X: &ast.Ident{
+									Name: "span",
+								},
+								Sel: &ast.Ident{
+									Name: "End",
+								},
+							},
+							Lparen:   41,
+							Ellipsis: 0,
+						},
 					}
+					_ = s1
+					x.Body.List = append([]ast.Stmt{s2, s3, s4, s5, s6, childTracingSupress, s8}, x.Body.List...)
+					addContext = true
+					addImports = true
+				}
+			}
+		case *ast.AssignStmt:
+
+			for _, e := range x.Lhs {
+				if ident, ok := e.(*ast.Ident); ok {
+					_ = ident
+					pkgPath := ""
+					pkgPath = GetPkgNameFromDefsTable(pkg, ident)
+					if pkg.TypesInfo.Defs[ident] == nil {
+						return false
+					}
+					fundId := pkgPath + "." + pkg.TypesInfo.Defs[ident].Name()
+					fun := FuncDescriptor{
+						Id:              fundId,
+						DeclType:        pkg.TypesInfo.Defs[ident].Type().String(),
+						CustomInjection: true}
+					_, exists := analysis.Callgraph[fun]
+					if exists {
+						return false
+					}
+				}
+			}
+			for _, e := range x.Rhs {
+				if funLit, ok := e.(*ast.FuncLit); ok {
+					functionLiteralPositions = append(functionLiteralPositions, funLit.Pos())
 					s1 := &ast.ExprStmt{
 						X: &ast.CallExpr{
 							Fun: &ast.SelectorExpr{
@@ -619,30 +486,129 @@ func Instrument(projectPath string,
 						},
 					}
 					_ = s1
-					x.Body.List = append([]ast.Stmt{s2, s3, s4}, x.Body.List...)
+					funLit.Body.List = append([]ast.Stmt{s2, s3, s4}, funLit.Body.List...)
 					addImports = true
 					addContext = true
 				}
+			}
+		case *ast.FuncLit:
+			for _, pos := range functionLiteralPositions {
+				if pos == x.Pos() {
+					return false
+				}
+			}
+			s1 := &ast.ExprStmt{
+				X: &ast.CallExpr{
+					Fun: &ast.SelectorExpr{
+						X: &ast.Ident{
+							Name: "fmt",
+						},
+						Sel: &ast.Ident{
+							Name: "Println",
+						},
+					},
+					Args: []ast.Expr{
+						&ast.BasicLit{
+							Kind:  token.STRING,
+							Value: `"child instrumentation"`,
+						},
+					},
+				},
+			}
+			s2 := &ast.AssignStmt{
+				Lhs: []ast.Expr{
+					&ast.Ident{
+						Name: "__child_tracing_ctx",
+					},
+					&ast.Ident{
+						Name: "span",
+					},
+				},
+				Tok: token.DEFINE,
+				Rhs: []ast.Expr{
+					&ast.CallExpr{
+						Fun: &ast.SelectorExpr{
+							X: &ast.CallExpr{
+								Fun: &ast.SelectorExpr{
+									X: &ast.Ident{
+										Name: "otel",
+									},
+									Sel: &ast.Ident{
+										Name: "Tracer",
+									},
+								},
+								Lparen: 50,
+								Args: []ast.Expr{
+									&ast.Ident{
+										Name: `"` + "anonymous" + `"`,
+									},
+								},
+								Ellipsis: 0,
+							},
+							Sel: &ast.Ident{
+								Name: "Start",
+							},
+						},
+						Lparen: 62,
+						Args: []ast.Expr{
+							&ast.Ident{
+								Name: "__child_tracing_ctx",
+							},
+							&ast.Ident{
+								Name: `"` + "anonymous" + `"`,
+							},
+						},
+						Ellipsis: 0,
+					},
+				},
+			}
 
-				return true
-			})
-			if addContext {
-				if !astutil.UsesImport(node, "context") {
-					astutil.AddImport(fset, node, "context")
-				}
+			s3 := &ast.AssignStmt{
+				Lhs: []ast.Expr{
+					&ast.Ident{
+						Name: "_",
+					},
+				},
+				Tok: token.ASSIGN,
+				Rhs: []ast.Expr{
+					&ast.Ident{
+						Name: "__child_tracing_ctx",
+					},
+				},
 			}
-			if addImports {
-				if !astutil.UsesImport(node, "go.opentelemetry.io/otel") {
-					astutil.AddNamedImport(fset, node, "otel", "go.opentelemetry.io/otel")
-				}
+
+			s4 := &ast.DeferStmt{
+				Defer: 27,
+				Call: &ast.CallExpr{
+					Fun: &ast.SelectorExpr{
+						X: &ast.Ident{
+							Name: "span",
+						},
+						Sel: &ast.Ident{
+							Name: "End",
+						},
+					},
+					Lparen:   41,
+					Ellipsis: 0,
+				},
 			}
-			printer.Fprint(out, fset, node)
-			if len(passFileSuffix) > 0 {
-				os.Rename(fset.File(node.Pos()).Name(), fset.File(node.Pos()).Name()+".tmp")
-			} else {
-				os.Rename(fset.File(node.Pos()).Name()+"ir_context", fset.File(node.Pos()).Name())
-			}
+			_ = s1
+			x.Body.List = append([]ast.Stmt{s2, s3, s4}, x.Body.List...)
+			addImports = true
+			addContext = true
 		}
 
+		return true
+	})
+	if addContext {
+		if !astutil.UsesImport(node, "context") {
+			imports = append(imports, Import{"", "context"})
+		}
 	}
+	if addImports {
+		if !astutil.UsesImport(node, "go.opentelemetry.io/otel") {
+			imports = append(imports, Import{"otel", "go.opentelemetry.io/otel"})
+		}
+	}
+	return imports
 }

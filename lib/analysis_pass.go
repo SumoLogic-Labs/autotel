@@ -43,12 +43,12 @@ type Import struct {
 type AnalysisPass interface {
 	Execute(node *ast.File,
 		analysis *Analysis,
-		pkg *packages.Package) []Import
+		pkg *packages.Package,
+		pkgs []*packages.Package) []Import
 }
 
-func (analysis *Analysis) Execute(pass AnalysisPass, inputFileSuffix string, intermediateFileSuffix string) {
+func (analysis *Analysis) Execute(pass AnalysisPass, fileSuffix string, leaveOriginal bool) {
 	fset := token.NewFileSet()
-	fmt.Println("Instrumentation")
 	cfg := &packages.Config{Fset: fset, Mode: LoadMode, Dir: analysis.ProjectPath}
 	pkgs, err := packages.Load(cfg, analysis.PackagePattern)
 	if err != nil {
@@ -60,18 +60,15 @@ func (analysis *Analysis) Execute(pass AnalysisPass, inputFileSuffix string, int
 		for _, node = range pkg.Syntax {
 			var out *os.File
 			fmt.Println("\t\t", fset.File(node.Pos()).Name())
-			if len(inputFileSuffix) > 0 {
-				out, _ = os.Create(fset.File(node.Pos()).Name() + inputFileSuffix)
-				defer out.Close()
-			} else {
-				out, _ = os.Create(fset.File(node.Pos()).Name() + intermediateFileSuffix)
-				defer out.Close()
-			}
+
+			out, _ = os.Create(fset.File(node.Pos()).Name() + fileSuffix)
+			defer out.Close()
+
 			if len(analysis.RootFunctions) == 0 {
 				printer.Fprint(out, fset, node)
 				continue
 			}
-			imports := pass.Execute(node, analysis, pkg)
+			imports := pass.Execute(node, analysis, pkg, pkgs)
 			for _, imp := range imports {
 				if len(imp.NamedPackage) > 0 {
 					astutil.AddNamedImport(fset, node, imp.NamedPackage, imp.Package)
@@ -80,12 +77,11 @@ func (analysis *Analysis) Execute(pass AnalysisPass, inputFileSuffix string, int
 				}
 			}
 			printer.Fprint(out, fset, node)
-			if len(inputFileSuffix) > 0 {
+			if leaveOriginal {
 				os.Rename(fset.File(node.Pos()).Name(), fset.File(node.Pos()).Name()+".original")
 			} else {
-				os.Rename(fset.File(node.Pos()).Name()+intermediateFileSuffix, fset.File(node.Pos()).Name())
+				os.Rename(fset.File(node.Pos()).Name()+fileSuffix, fset.File(node.Pos()).Name())
 			}
-
 		}
 	}
 }

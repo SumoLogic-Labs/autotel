@@ -17,10 +17,6 @@ package lib
 import (
 	"fmt"
 	"go/ast"
-	"go/printer"
-	"go/token"
-	"log"
-	"os"
 
 	"golang.org/x/tools/go/ast/astutil"
 	"golang.org/x/tools/go/packages"
@@ -41,69 +37,28 @@ func isFunPartOfCallGraph(fun FuncDescriptor, callgraph map[FuncDescriptor][]Fun
 	return false
 }
 
-func PropagateContext(projectPath string,
-	packagePattern string,
-	callgraph map[FuncDescriptor][]FuncDescriptor,
-	rootFunctions []FuncDescriptor,
-	funcDecls map[FuncDescriptor]bool,
-	interfaces map[string]bool,
-	passFileSuffix string) {
+type ContextPropagationPass struct {
+}
 
-	fset := token.NewFileSet()
-	fmt.Println("PropagateContext")
-	cfg := &packages.Config{Fset: fset, Mode: LoadMode, Dir: projectPath}
-	pkgs, err := packages.Load(cfg, packagePattern)
-	if err != nil {
-		log.Fatal(err)
-	}
-	for _, pkg := range pkgs {
-		fmt.Println("\t", pkg)
-		var node *ast.File
-		for _, node = range pkg.Syntax {
-			addImports := false
-			var out *os.File
-			fmt.Println("\t\t", fset.File(node.Pos()).Name())
-			if len(passFileSuffix) > 0 {
-				out, _ = os.Create(fset.File(node.Pos()).Name() + passFileSuffix)
-				defer out.Close()
+func (pass *ContextPropagationPass) Execute(
+	node *ast.File,
+	analysis *Analysis,
+	pkg *packages.Package,
+	pkgs []*packages.Package) []Import {
+	var imports []Import
+	addImports := false
+	// below variable is used
+	// when callexpr is inside var decl
+	// instead of functiondecl
+	currentFun := FuncDescriptor{}
+
+	emitEmptyContext := func(x *ast.CallExpr, fun FuncDescriptor, ctxArg *ast.Ident) {
+		addImports = true
+		if currentFun != (FuncDescriptor{}) {
+			visited := map[FuncDescriptor]bool{}
+			if isPath(analysis.Callgraph, currentFun, analysis.RootFunctions[0], visited) {
+				x.Args = append([]ast.Expr{ctxArg}, x.Args...)
 			} else {
-				out, _ = os.Create(fset.File(node.Pos()).Name() + "ir_instr")
-				defer out.Close()
-			}
-
-			if len(rootFunctions) == 0 {
-				printer.Fprint(out, fset, node)
-				continue
-			}
-
-			// below variable is used
-			// when callexpr is inside var decl
-			// instead of functiondecl
-			currentFun := FuncDescriptor{}
-
-			emitEmptyContext := func(x *ast.CallExpr, fun FuncDescriptor, ctxArg *ast.Ident) {
-				addImports = true
-				if currentFun != (FuncDescriptor{}) {
-					visited := map[FuncDescriptor]bool{}
-					if isPath(callgraph, currentFun, rootFunctions[0], visited) {
-						x.Args = append([]ast.Expr{ctxArg}, x.Args...)
-					} else {
-						contextTodo := &ast.CallExpr{
-							Fun: &ast.SelectorExpr{
-								X: &ast.Ident{
-									Name: "context",
-								},
-								Sel: &ast.Ident{
-									Name: "TODO",
-								},
-							},
-							Lparen:   62,
-							Ellipsis: 0,
-						}
-						x.Args = append([]ast.Expr{contextTodo}, x.Args...)
-					}
-					return
-				}
 				contextTodo := &ast.CallExpr{
 					Fun: &ast.SelectorExpr{
 						X: &ast.Ident{
@@ -117,170 +72,176 @@ func PropagateContext(projectPath string,
 					Ellipsis: 0,
 				}
 				x.Args = append([]ast.Expr{contextTodo}, x.Args...)
-
 			}
-			emitCallExpr := func(ident *ast.Ident, n ast.Node, ctxArg *ast.Ident) {
-				switch x := n.(type) {
-				case *ast.CallExpr:
-					if pkg.TypesInfo.Uses[ident] == nil {
-						return
-					}
-					pkgPath := GetPkgNameFromUsesTable(pkg, ident)
-					funId := pkgPath + "." + pkg.TypesInfo.Uses[ident].Name()
-					fun := FuncDescriptor{
-						Id:              funId,
-						DeclType:        pkg.TypesInfo.Uses[ident].Type().String(),
-						CustomInjection: false}
-					found := funcDecls[fun]
+			return
+		}
+		contextTodo := &ast.CallExpr{
+			Fun: &ast.SelectorExpr{
+				X: &ast.Ident{
+					Name: "context",
+				},
+				Sel: &ast.Ident{
+					Name: "TODO",
+				},
+			},
+			Lparen:   62,
+			Ellipsis: 0,
+		}
+		x.Args = append([]ast.Expr{contextTodo}, x.Args...)
 
-					// inject context parameter only
-					// to these functions for which function decl
-					// exists
-
-					if found {
-						visited := map[FuncDescriptor]bool{}
-						if isPath(callgraph, fun, rootFunctions[0], visited) {
-							fmt.Println("\t\t\tContextPropagation FuncCall:", funId, pkg.TypesInfo.Uses[ident].Type().String())
-							emitEmptyContext(x, fun, ctxArg)
-						}
-					}
-
-				}
+	}
+	emitCallExpr := func(ident *ast.Ident, n ast.Node, ctxArg *ast.Ident) {
+		switch x := n.(type) {
+		case *ast.CallExpr:
+			if pkg.TypesInfo.Uses[ident] == nil {
+				return
 			}
-			emitCallExprFromSelector := func(sel *ast.SelectorExpr, n ast.Node, ctxArg *ast.Ident) {
-				switch x := n.(type) {
-				case *ast.CallExpr:
-					if pkg.TypesInfo.Uses[sel.Sel] == nil {
-						return
-					}
-					pkgPath := GetPkgNameFromUsesTable(pkg, sel.Sel)
-					if sel.X != nil {
-						pkgPath = GetSelectorPkgPath(sel, pkg, pkgPath)
-					}
-					funId := pkgPath + "." + pkg.TypesInfo.Uses[sel.Sel].Name()
-					fun := FuncDescriptor{
-						Id:              funId,
-						DeclType:        pkg.TypesInfo.Uses[sel.Sel].Type().String(),
-						CustomInjection: false}
+			pkgPath := GetPkgNameFromUsesTable(pkg, ident)
+			funId := pkgPath + "." + pkg.TypesInfo.Uses[ident].Name()
+			fun := FuncDescriptor{
+				Id:              funId,
+				DeclType:        pkg.TypesInfo.Uses[ident].Type().String(),
+				CustomInjection: false}
+			found := analysis.FuncDecls[fun]
 
-					found := funcDecls[fun]
-					// inject context parameter only
-					// to these functions for which function decl
-					// exists
+			// inject context parameter only
+			// to these functions for which function decl
+			// exists
 
-					if found {
-						visited := map[FuncDescriptor]bool{}
-						if isPath(callgraph, fun, rootFunctions[0], visited) {
-							fmt.Println("\t\t\tContextPropagation FuncCall via selector:", funId,
-								pkg.TypesInfo.Uses[sel.Sel].Type().String(),
-								" @called : ", fset.File(node.Pos()).Name())
-							emitEmptyContext(x, fun, ctxArg)
-						}
-					}
-				}
-			}
-			ast.Inspect(node, func(n ast.Node) bool {
-				ctxArg := &ast.Ident{
-					Name: "__child_tracing_ctx",
-				}
-				ctxField := &ast.Field{
-					Names: []*ast.Ident{
-						&ast.Ident{
-							Name: "__tracing_ctx",
-						},
-					},
-					Type: &ast.SelectorExpr{
-						X: &ast.Ident{
-							Name: "context",
-						},
-						Sel: &ast.Ident{
-							Name: "Context",
-						},
-					},
-				}
-
-				switch x := n.(type) {
-				case *ast.FuncDecl:
-					pkgPath := ""
-
-					if x.Recv != nil {
-						pkgPath = GetPackagePathHashFromFunc(pkg, pkgs, x, interfaces)
-					} else {
-						pkgPath = GetPkgNameFromDefsTable(pkg, x.Name)
-					}
-					funId := pkgPath + "." + pkg.TypesInfo.Defs[x.Name].Name()
-					fun := FuncDescriptor{
-						Id:              funId,
-						DeclType:        pkg.TypesInfo.Defs[x.Name].Type().String(),
-						CustomInjection: false}
-					currentFun = fun
-					// inject context only
-					// functions available in the call graph
-					if !isFunPartOfCallGraph(fun, callgraph) {
-						break
-					}
-
-					if Contains(rootFunctions, fun) {
-						break
-					}
-					visited := map[FuncDescriptor]bool{}
-
-					if isPath(callgraph, fun, rootFunctions[0], visited) {
-						fmt.Println("\t\t\tContextPropagation FuncDecl:", funId,
-							pkg.TypesInfo.Defs[x.Name].Type().String(), " @defined : ", fset.File(node.Pos()).Name())
-						addImports = true
-						x.Type.Params.List = append([]*ast.Field{ctxField}, x.Type.Params.List...)
-					}
-				case *ast.CallExpr:
-					if ident, ok := x.Fun.(*ast.Ident); ok {
-
-						emitCallExpr(ident, n, ctxArg)
-					}
-
-					if sel, ok := x.Fun.(*ast.SelectorExpr); ok {
-						emitCallExprFromSelector(sel, n, ctxArg)
-					}
-
-				case *ast.TypeSpec:
-					iname := x.Name
-					iface, ok := x.Type.(*ast.InterfaceType)
-					if !ok {
-						return true
-					}
-					for _, method := range iface.Methods.List {
-						funcType, ok := method.Type.(*ast.FuncType)
-						if !ok {
-							return true
-						}
-						visited := map[FuncDescriptor]bool{}
-						pkgPath := GetPkgNameFromDefsTable(pkg, method.Names[0])
-						funId := pkgPath + "." + iname.Name + "." + pkg.TypesInfo.Defs[method.Names[0]].Name()
-						fun := FuncDescriptor{
-							Id:              funId,
-							DeclType:        pkg.TypesInfo.Defs[method.Names[0]].Type().String(),
-							CustomInjection: false}
-						if isPath(callgraph, fun, rootFunctions[0], visited) {
-							fmt.Println("\t\t\tContext Propagation InterfaceType", fun.Id, fun.DeclType)
-							addImports = true
-							funcType.Params.List = append([]*ast.Field{ctxField}, funcType.Params.List...)
-						}
-					}
-
-				}
-				return true
-			})
-			if addImports {
-				if !astutil.UsesImport(node, "context") {
-					astutil.AddImport(fset, node, "context")
+			if found {
+				visited := map[FuncDescriptor]bool{}
+				if isPath(analysis.Callgraph, fun, analysis.RootFunctions[0], visited) {
+					fmt.Println("\t\t\tContextPropagation FuncCall:", funId, pkg.TypesInfo.Uses[ident].Type().String())
+					emitEmptyContext(x, fun, ctxArg)
 				}
 			}
 
-			printer.Fprint(out, fset, node)
-			if len(passFileSuffix) > 0 {
-				os.Rename(fset.File(node.Pos()).Name(), fset.File(node.Pos()).Name()+".tmp")
-			} else {
-				os.Rename(fset.File(node.Pos()).Name()+"ir_instr", fset.File(node.Pos()).Name())
+		}
+	}
+	emitCallExprFromSelector := func(sel *ast.SelectorExpr, n ast.Node, ctxArg *ast.Ident) {
+		switch x := n.(type) {
+		case *ast.CallExpr:
+			if pkg.TypesInfo.Uses[sel.Sel] == nil {
+				return
+			}
+			pkgPath := GetPkgNameFromUsesTable(pkg, sel.Sel)
+			if sel.X != nil {
+				pkgPath = GetSelectorPkgPath(sel, pkg, pkgPath)
+			}
+			funId := pkgPath + "." + pkg.TypesInfo.Uses[sel.Sel].Name()
+			fun := FuncDescriptor{
+				Id:              funId,
+				DeclType:        pkg.TypesInfo.Uses[sel.Sel].Type().String(),
+				CustomInjection: false}
+
+			found := analysis.FuncDecls[fun]
+			// inject context parameter only
+			// to these functions for which function decl
+			// exists
+
+			if found {
+				visited := map[FuncDescriptor]bool{}
+				if isPath(analysis.Callgraph, fun, analysis.RootFunctions[0], visited) {
+					fmt.Println("\t\t\tContextPropagation FuncCall via selector:", funId,
+						pkg.TypesInfo.Uses[sel.Sel].Type().String())
+					emitEmptyContext(x, fun, ctxArg)
+				}
 			}
 		}
 	}
+	ast.Inspect(node, func(n ast.Node) bool {
+		ctxArg := &ast.Ident{
+			Name: "__child_tracing_ctx",
+		}
+		ctxField := &ast.Field{
+			Names: []*ast.Ident{
+				&ast.Ident{
+					Name: "__tracing_ctx",
+				},
+			},
+			Type: &ast.SelectorExpr{
+				X: &ast.Ident{
+					Name: "context",
+				},
+				Sel: &ast.Ident{
+					Name: "Context",
+				},
+			},
+		}
+
+		switch x := n.(type) {
+		case *ast.FuncDecl:
+			pkgPath := ""
+
+			if x.Recv != nil {
+				pkgPath = GetPackagePathHashFromFunc(pkg, pkgs, x, analysis.Interfaces)
+			} else {
+				pkgPath = GetPkgNameFromDefsTable(pkg, x.Name)
+			}
+			funId := pkgPath + "." + pkg.TypesInfo.Defs[x.Name].Name()
+			fun := FuncDescriptor{
+				Id:              funId,
+				DeclType:        pkg.TypesInfo.Defs[x.Name].Type().String(),
+				CustomInjection: false}
+			currentFun = fun
+			// inject context only
+			// functions available in the call graph
+			if !isFunPartOfCallGraph(fun, analysis.Callgraph) {
+				break
+			}
+
+			if Contains(analysis.RootFunctions, fun) {
+				break
+			}
+			visited := map[FuncDescriptor]bool{}
+
+			if isPath(analysis.Callgraph, fun, analysis.RootFunctions[0], visited) {
+				fmt.Println("\t\t\tContextPropagation FuncDecl:", funId,
+					pkg.TypesInfo.Defs[x.Name].Type().String())
+				addImports = true
+				x.Type.Params.List = append([]*ast.Field{ctxField}, x.Type.Params.List...)
+			}
+		case *ast.CallExpr:
+			if ident, ok := x.Fun.(*ast.Ident); ok {
+				emitCallExpr(ident, n, ctxArg)
+			}
+
+			if sel, ok := x.Fun.(*ast.SelectorExpr); ok {
+				emitCallExprFromSelector(sel, n, ctxArg)
+			}
+
+		case *ast.TypeSpec:
+			iname := x.Name
+			iface, ok := x.Type.(*ast.InterfaceType)
+			if !ok {
+				return true
+			}
+			for _, method := range iface.Methods.List {
+				funcType, ok := method.Type.(*ast.FuncType)
+				if !ok {
+					return true
+				}
+				visited := map[FuncDescriptor]bool{}
+				pkgPath := GetPkgNameFromDefsTable(pkg, method.Names[0])
+				funId := pkgPath + "." + iname.Name + "." + pkg.TypesInfo.Defs[method.Names[0]].Name()
+				fun := FuncDescriptor{
+					Id:              funId,
+					DeclType:        pkg.TypesInfo.Defs[method.Names[0]].Type().String(),
+					CustomInjection: false}
+				if isPath(analysis.Callgraph, fun, analysis.RootFunctions[0], visited) {
+					fmt.Println("\t\t\tContext Propagation InterfaceType", fun.Id, fun.DeclType)
+					addImports = true
+					funcType.Params.List = append([]*ast.Field{ctxField}, funcType.Params.List...)
+				}
+			}
+
+		}
+		return true
+	})
+	if addImports {
+		if !astutil.UsesImport(node, "context") {
+			imports = append(imports, Import{"", "context"})
+		}
+	}
+	return imports
 }

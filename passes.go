@@ -15,6 +15,8 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/sumologic-labs/autotel/instrumentations/http"
 	"github.com/sumologic-labs/autotel/lib"
 )
@@ -25,64 +27,26 @@ const (
 	httpPassFileSuffix            = "_pass_http.go"
 )
 
-func ExecutePassesDumpIr(projectPath string,
-	packagePattern string,
-	rootFunctions []lib.FuncDescriptor,
-	funcDecls map[lib.FuncDescriptor]bool,
-	backwardCallGraph map[lib.FuncDescriptor][]lib.FuncDescriptor,
-	interfaces map[string]bool) {
+func ExecutePassesDumpIr(analysis *lib.Analysis) {
 
-	http.HttpRewrite(projectPath,
-		packagePattern,
-		&backwardCallGraph,
-		rootFunctions,
-		interfaces,
-		httpPassFileSuffix)
+	fmt.Println("Http Instrumentation")
+	analysis.Execute(&http.HttpRewriter{}, httpPassFileSuffix, true)
 
-	lib.Instrument(projectPath,
-		packagePattern,
-		backwardCallGraph,
-		rootFunctions,
-		interfaces,
-		instrumentationPassFileSuffix)
+	fmt.Println("Instrumentation")
+	analysis.Execute(&lib.InstrumentationPass{}, instrumentationPassFileSuffix, true)
 
-	lib.PropagateContext(projectPath,
-		packagePattern,
-		backwardCallGraph,
-		rootFunctions,
-		funcDecls,
-		interfaces,
-		contextPassFileSuffix)
-
+	fmt.Println("ContextPropagation")
+	analysis.Execute(&lib.ContextPropagationPass{}, contextPassFileSuffix, true)
 }
 
-func ExecutePasses(projectPath string,
-	packagePattern string,
-	rootFunctions []lib.FuncDescriptor,
-	funcDecls map[lib.FuncDescriptor]bool,
-	backwardCallGraph map[lib.FuncDescriptor][]lib.FuncDescriptor,
-	interfaces map[string]bool) {
+func ExecutePasses(analysis *lib.Analysis) {
 
-	http.HttpRewrite(projectPath,
-		packagePattern,
-		&backwardCallGraph,
-		rootFunctions,
-		interfaces,
-		"")
+	fmt.Println("Http Instrumentation")
+	analysis.Execute(&http.HttpRewriter{}, httpPassFileSuffix, false)
 
-	lib.Instrument(projectPath,
-		packagePattern,
-		backwardCallGraph,
-		rootFunctions,
-		interfaces,
-		"")
+	fmt.Println("Instrumentation")
+	analysis.Execute(&lib.InstrumentationPass{}, instrumentationPassFileSuffix, false)
 
-	lib.PropagateContext(projectPath,
-		packagePattern,
-		backwardCallGraph,
-		rootFunctions,
-		funcDecls,
-		interfaces,
-		"")
-
+	fmt.Println("ContextPropagation")
+	analysis.Execute(&lib.ContextPropagationPass{}, contextPassFileSuffix, false)
 }

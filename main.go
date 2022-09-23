@@ -80,8 +80,8 @@ func executeCommand(arglist []string, autotelState *AutotelState) {
 				fmt.Print(" ", v)
 			}
 			fmt.Println("")
-
-			ExecutePasses(projectPath, packagePattern, rootFunctions, funcDecls, backwardCallGraph, interfaces)
+			analysis := &alib.Analysis{projectPath, packagePattern, rootFunctions, funcDecls, backwardCallGraph, interfaces}
+			ExecutePasses(analysis)
 			fmt.Println("\tinstrumentation done")
 		} else {
 			interfaces = alib.FindInterfaces(projectPath, packagePattern)
@@ -101,7 +101,8 @@ func executeCommand(arglist []string, autotelState *AutotelState) {
 			}
 			fmt.Println("")
 
-			ExecutePasses(projectPath, packagePattern, rootFunctions, funcDecls, backwardCallGraph, interfaces)
+			analysis := &alib.Analysis{projectPath, packagePattern, rootFunctions, funcDecls, backwardCallGraph, interfaces}
+			ExecutePasses(analysis)
 			fmt.Println("\tinstrumentation done")
 		}
 	}
@@ -121,8 +122,8 @@ func executeCommand(arglist []string, autotelState *AutotelState) {
 				fmt.Print(" ", v)
 			}
 			fmt.Println("")
-
-			ExecutePasses(projectPath, packagePattern, rootFunctions, funcDecls, backwardCallGraph, interfaces)
+			analysis := &alib.Analysis{projectPath, packagePattern, rootFunctions, funcDecls, backwardCallGraph, interfaces}
+			ExecutePassesDumpIr(analysis)
 			fmt.Println("\tinstrumentation done")
 		} else {
 			interfaces = alib.FindInterfaces(projectPath, packagePattern)
@@ -142,7 +143,8 @@ func executeCommand(arglist []string, autotelState *AutotelState) {
 				fmt.Print(" ", v)
 			}
 			fmt.Println("")
-			ExecutePassesDumpIr(projectPath, packagePattern, rootFunctions, funcDecls, backwardCallGraph, interfaces)
+			analysis := &alib.Analysis{projectPath, packagePattern, rootFunctions, funcDecls, backwardCallGraph, interfaces}
+			ExecutePassesDumpIr(analysis)
 			fmt.Println("\tinstrumentation done")
 
 		}
@@ -178,7 +180,8 @@ func executeCommand(arglist []string, autotelState *AutotelState) {
 		interfaces := alib.FindInterfaces(projectPath, packagePattern)
 		funcDecls := alib.FindFuncDecls(projectPath, packagePattern, interfaces)
 
-		ExecutePasses(projectPath, packagePattern, rootFunctions, funcDecls, backwardCallGraph, interfaces)
+		analysis := &alib.Analysis{projectPath, packagePattern, rootFunctions, funcDecls, backwardCallGraph, interfaces}
+		ExecutePasses(analysis)
 	}
 	if arglist[1] == "--dumpcfg" {
 		projectPath := arglist[2]

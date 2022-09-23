@@ -17,12 +17,17 @@ package lib
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 )
 
-func SearchFiles(root string, ext string) []string {
+func SearchFiles(root string, substring string, ext string) []string {
 	var files []string
+	libRegEx, e := regexp.Compile(substring)
+	if e != nil {
+		return files
+	}
 	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
-		if filepath.Ext(path) == ext {
+		if libRegEx.MatchString(path) {
 			files = append(files, path)
 		}
 		return nil
@@ -70,18 +75,8 @@ func Contains(a []FuncDescriptor, x FuncDescriptor) bool {
 
 func Revert(path string) {
 	goExt := ".go"
-	originalExt := ".original"
-	files := SearchFiles(path, ".tmp")
+	files := SearchFiles(path, "_pass", goExt)
 	for _, file := range files {
 		os.Remove(file)
-	}
-	files = SearchFiles(path, goExt)
-	for _, file := range files {
-		os.Remove(file)
-	}
-	files = SearchFiles(path, originalExt)
-	for _, file := range files {
-		newFile := file[:len(file)-(len(goExt)+len(originalExt))]
-		os.Rename(file, newFile+".go")
 	}
 }
