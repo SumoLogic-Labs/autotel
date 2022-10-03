@@ -80,7 +80,13 @@ func executeCommand(arglist []string, autotelState *AutotelState) {
 				fmt.Print(" ", v)
 			}
 			fmt.Println("")
-			analysis := &alib.Analysis{projectPath, packagePattern, rootFunctions, funcDecls, backwardCallGraph, interfaces}
+			analysis := &alib.Analysis{
+				ProjectPath:    projectPath,
+				PackagePattern: packagePattern,
+				RootFunctions:  rootFunctions,
+				FuncDecls:      funcDecls,
+				Callgraph:      backwardCallGraph,
+				Interfaces:     interfaces}
 			ExecutePasses(analysis)
 			fmt.Println("\tinstrumentation done")
 		} else {
@@ -101,7 +107,13 @@ func executeCommand(arglist []string, autotelState *AutotelState) {
 			}
 			fmt.Println("")
 
-			analysis := &alib.Analysis{projectPath, packagePattern, rootFunctions, funcDecls, backwardCallGraph, interfaces}
+			analysis := &alib.Analysis{
+				ProjectPath:    projectPath,
+				PackagePattern: packagePattern,
+				RootFunctions:  rootFunctions,
+				FuncDecls:      funcDecls,
+				Callgraph:      backwardCallGraph,
+				Interfaces:     interfaces}
 			ExecutePasses(analysis)
 			fmt.Println("\tinstrumentation done")
 		}
@@ -122,7 +134,13 @@ func executeCommand(arglist []string, autotelState *AutotelState) {
 				fmt.Print(" ", v)
 			}
 			fmt.Println("")
-			analysis := &alib.Analysis{projectPath, packagePattern, rootFunctions, funcDecls, backwardCallGraph, interfaces}
+			analysis := &alib.Analysis{
+				ProjectPath:    projectPath,
+				PackagePattern: packagePattern,
+				RootFunctions:  rootFunctions,
+				FuncDecls:      funcDecls,
+				Callgraph:      backwardCallGraph,
+				Interfaces:     interfaces}
 			ExecutePassesDumpIr(analysis)
 			fmt.Println("\tinstrumentation done")
 		} else {
@@ -143,7 +161,13 @@ func executeCommand(arglist []string, autotelState *AutotelState) {
 				fmt.Print(" ", v)
 			}
 			fmt.Println("")
-			analysis := &alib.Analysis{projectPath, packagePattern, rootFunctions, funcDecls, backwardCallGraph, interfaces}
+			analysis := &alib.Analysis{
+				ProjectPath:    projectPath,
+				PackagePattern: packagePattern,
+				RootFunctions:  rootFunctions,
+				FuncDecls:      funcDecls,
+				Callgraph:      backwardCallGraph,
+				Interfaces:     interfaces}
 			ExecutePassesDumpIr(analysis)
 			fmt.Println("\tinstrumentation done")
 
@@ -167,9 +191,9 @@ func executeCommand(arglist []string, autotelState *AutotelState) {
 			fmt.Print("\n\t", keyValue[0])
 			for i := 1; i < len(keyValue); i++ {
 				fmt.Print(" ", keyValue[i])
-				funList = append(funList, alib.FuncDescriptor{keyValue[i], "", false})
+				funList = append(funList, alib.FuncDescriptor{Id: keyValue[i], DeclType: "", CustomInjection: false})
 			}
-			backwardCallGraph[alib.FuncDescriptor{keyValue[0], "", false}] = funList
+			backwardCallGraph[alib.FuncDescriptor{Id: keyValue[0], DeclType: "", CustomInjection: false}] = funList
 		}
 		rootFunctions := alib.InferRootFunctionsFromGraph(backwardCallGraph)
 		for _, v := range rootFunctions {
@@ -180,7 +204,13 @@ func executeCommand(arglist []string, autotelState *AutotelState) {
 		interfaces := alib.FindInterfaces(projectPath, packagePattern)
 		funcDecls := alib.FindFuncDecls(projectPath, packagePattern, interfaces)
 
-		analysis := &alib.Analysis{projectPath, packagePattern, rootFunctions, funcDecls, backwardCallGraph, interfaces}
+		analysis := &alib.Analysis{
+			ProjectPath:    projectPath,
+			PackagePattern: packagePattern,
+			RootFunctions:  rootFunctions,
+			FuncDecls:      funcDecls,
+			Callgraph:      backwardCallGraph,
+			Interfaces:     interfaces}
 		ExecutePasses(analysis)
 	}
 	if arglist[1] == "--dumpcfg" {
