@@ -23,13 +23,13 @@ import (
 )
 
 func main() {
-	ts := rtlib.NewTracingState()
-	defer rtlib.Shutdown(ts)
-	otel.SetTracerProvider(ts.Tp)
-	ctx := context.Background()
-	__child_tracing_ctx, span := otel.Tracer("main").Start(ctx, "main")
-	_ = __child_tracing_ctx
-	defer span.End()
+	__atel_ts := rtlib.NewTracingState()
+	defer rtlib.Shutdown(__atel_ts)
+	otel.SetTracerProvider(__atel_ts.Tp)
+	__atel_ctx := context.Background()
+	__atel_child_tracing_ctx, __atel_span := otel.Tracer("main").Start(__atel_ctx, "main")
+	_ = __atel_child_tracing_ctx
+	defer __atel_span.End()
 	rtlib.AutotelEntryPoint__()
-	fmt.Println(FibonacciHelper(__child_tracing_ctx, 10))
+	fmt.Println(FibonacciHelper(__atel_child_tracing_ctx, 10))
 }

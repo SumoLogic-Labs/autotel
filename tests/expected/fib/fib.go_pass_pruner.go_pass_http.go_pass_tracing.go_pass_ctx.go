@@ -20,31 +20,33 @@ import (
 	otel "go.opentelemetry.io/otel"
 )
 
-func foo(__tracing_ctx context.Context,) {
-	__child_tracing_ctx, span := otel.Tracer("foo").Start(__tracing_ctx, "foo")
-	_ = __child_tracing_ctx
-	defer span.End()
+func foo(__atel_tracing_ctx context.Context,) {
+	__atel_child_tracing_ctx, __atel_span := otel.Tracer("foo").Start(__atel_tracing_ctx, "foo")
+	_ = __atel_child_tracing_ctx
+	defer __atel_span.End()
 	fmt.Println("foo")
 }
 
-func FibonacciHelper(__tracing_ctx context.Context, n uint) (uint64, error) {
-	__child_tracing_ctx, span := otel.Tracer("FibonacciHelper").Start(__tracing_ctx, "FibonacciHelper")
-	_ = __child_tracing_ctx
-	defer span.End()
+func FibonacciHelper(__atel_tracing_ctx context.Context, n uint) (uint64, error) {
+	__atel_child_tracing_ctx, __atel_span := otel.Tracer("FibonacciHelper").Start(__atel_tracing_ctx, "FibonacciHelper")
+	_ = __atel_child_tracing_ctx
+	defer __atel_span.End()
 	func() {
-		__child_tracing_ctx, span := otel.Tracer("anonymous").Start(__child_tracing_ctx, "anonymous")
-		_ = __child_tracing_ctx
-		defer span.End()
-		foo(__child_tracing_ctx)
+		__atel_child_tracing_ctx, __atel_span := otel.
+
+			// Fibonacci returns the n-th fibonacci number.
+			Tracer("anonymous").Start(__atel_child_tracing_ctx, "anonymous")
+		_ = __atel_child_tracing_ctx
+		defer __atel_span.End()
+		foo(__atel_child_tracing_ctx)
 	}()
-	return Fibonacci(__child_tracing_ctx, n)
+	return Fibonacci(__atel_child_tracing_ctx, n)
 }
 
-// Fibonacci returns the n-th fibonacci number.
-func Fibonacci(__tracing_ctx context.Context, n uint) (uint64, error) {
-	__child_tracing_ctx, span := otel.Tracer("Fibonacci").Start(__tracing_ctx, "Fibonacci")
-	_ = __child_tracing_ctx
-	defer span.End()
+func Fibonacci(__atel_tracing_ctx context.Context, n uint) (uint64, error) {
+	__atel_child_tracing_ctx, __atel_span := otel.Tracer("Fibonacci").Start(__atel_tracing_ctx, "Fibonacci")
+	_ = __atel_child_tracing_ctx
+	defer __atel_span.End()
 	if n <= 1 {
 		return uint64(n), nil
 	}
