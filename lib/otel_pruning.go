@@ -16,6 +16,12 @@ func (pass *OtelPruner) Execute(
 	pkgs []*packages.Package) []Import {
 	var imports []Import
 	ast.Inspect(node, func(n ast.Node) bool {
+		switch x := n.(type) {
+		case *ast.FuncDecl:
+			for _, stmt := range x.Body.List {
+				_ = stmt
+			}
+		}
 		return true
 	})
 	return imports
