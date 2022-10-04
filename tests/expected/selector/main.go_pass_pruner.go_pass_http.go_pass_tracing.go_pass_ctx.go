@@ -21,32 +21,32 @@ import (
 )
 
 type Driver interface {
-	Foo(__tracing_ctx context.Context, i int)
+	Foo(__atel_tracing_ctx context.Context, i int)
 }
 
 type Impl struct {
 }
 
-func (impl Impl) Foo(__tracing_ctx context.Context, i int) {
-	__child_tracing_ctx, span := otel.Tracer("Foo").Start(__tracing_ctx, "Foo")
-	_ = __child_tracing_ctx
-	defer span.End()
+func (impl Impl) Foo(__atel_tracing_ctx context.Context, i int) {
+	__atel_child_tracing_ctx, __atel_span := otel.Tracer("Foo").Start(__atel_tracing_ctx, "Foo")
+	_ = __atel_child_tracing_ctx
+	defer __atel_span.End()
 }
 
 func main() {
-	ts := rtlib.NewTracingState()
-	defer rtlib.Shutdown(ts)
-	otel.SetTracerProvider(ts.Tp)
-	ctx := context.Background()
-	__child_tracing_ctx, span := otel.Tracer("main").Start(ctx, "main")
-	_ = __child_tracing_ctx
-	defer span.End()
+	__atel_ts := rtlib.NewTracingState()
+	defer rtlib.Shutdown(__atel_ts)
+	otel.SetTracerProvider(__atel_ts.Tp)
+	__atel_ctx := context.Background()
+	__atel_child_tracing_ctx, __atel_span := otel.Tracer("main").Start(__atel_ctx, "main")
+	_ = __atel_child_tracing_ctx
+	defer __atel_span.End()
 	rtlib.AutotelEntryPoint__()
 	a := []Driver{
 		Impl{},
 	}
 	var d Driver
 	d = Impl{}
-	d.Foo(__child_tracing_ctx, 3)
-	a[0].Foo(__child_tracing_ctx, 4)
+	d.Foo(__atel_child_tracing_ctx, 3)
+	a[0].Foo(__atel_child_tracing_ctx, 4)
 }
