@@ -44,7 +44,7 @@ func (pass *InstrumentationPass) Execute(
 		Tok: token.ASSIGN,
 		Rhs: []ast.Expr{
 			&ast.Ident{
-				Name: "__child_tracing_ctx",
+				Name: "__atel_child_tracing_ctx",
 			},
 		},
 	}
@@ -86,10 +86,10 @@ func (pass *InstrumentationPass) Execute(
 					s2 := &ast.AssignStmt{
 						Lhs: []ast.Expr{
 							&ast.Ident{
-								Name: "__child_tracing_ctx",
+								Name: "__atel_child_tracing_ctx",
 							},
 							&ast.Ident{
-								Name: "span",
+								Name: "__atel_span",
 							},
 						},
 						Tok: token.DEFINE,
@@ -120,7 +120,7 @@ func (pass *InstrumentationPass) Execute(
 								Lparen: 62,
 								Args: []ast.Expr{
 									&ast.Ident{
-										Name: "__tracing_ctx",
+										Name: "__atel_tracing_ctx",
 									},
 									&ast.Ident{
 										Name: `"` + x.Name.Name + `"`,
@@ -140,7 +140,7 @@ func (pass *InstrumentationPass) Execute(
 						Tok: token.ASSIGN,
 						Rhs: []ast.Expr{
 							&ast.Ident{
-								Name: "__child_tracing_ctx",
+								Name: "__atel_child_tracing_ctx",
 							},
 						},
 					}
@@ -150,7 +150,7 @@ func (pass *InstrumentationPass) Execute(
 						Call: &ast.CallExpr{
 							Fun: &ast.SelectorExpr{
 								X: &ast.Ident{
-									Name: "span",
+									Name: "__atel_span",
 								},
 								Sel: &ast.Ident{
 									Name: "End",
@@ -172,7 +172,7 @@ func (pass *InstrumentationPass) Execute(
 						&ast.AssignStmt{
 							Lhs: []ast.Expr{
 								&ast.Ident{
-									Name: "ts",
+									Name: "__atel_ts",
 								},
 							},
 							Tok: token.DEFINE,
@@ -206,7 +206,7 @@ func (pass *InstrumentationPass) Execute(
 							Lparen: 48,
 							Args: []ast.Expr{
 								&ast.Ident{
-									Name: "ts",
+									Name: "__atel_ts",
 								},
 							},
 							Ellipsis: 0,
@@ -227,7 +227,7 @@ func (pass *InstrumentationPass) Execute(
 							Args: []ast.Expr{
 								&ast.SelectorExpr{
 									X: &ast.Ident{
-										Name: "ts",
+										Name: "__atel_ts",
 									},
 									Sel: &ast.Ident{
 										Name: "Tp",
@@ -240,7 +240,7 @@ func (pass *InstrumentationPass) Execute(
 					s5 := &ast.AssignStmt{
 						Lhs: []ast.Expr{
 							&ast.Ident{
-								Name: "ctx",
+								Name: "__atel_ctx",
 							},
 						},
 						Tok: token.DEFINE,
@@ -262,10 +262,10 @@ func (pass *InstrumentationPass) Execute(
 					s6 := &ast.AssignStmt{
 						Lhs: []ast.Expr{
 							&ast.Ident{
-								Name: "__child_tracing_ctx",
+								Name: "__atel_child_tracing_ctx",
 							},
 							&ast.Ident{
-								Name: "span",
+								Name: "__atel_span",
 							},
 						},
 						Tok: token.DEFINE,
@@ -296,7 +296,7 @@ func (pass *InstrumentationPass) Execute(
 								Lparen: 62,
 								Args: []ast.Expr{
 									&ast.Ident{
-										Name: "ctx",
+										Name: "__atel_ctx",
 									},
 									&ast.Ident{
 										Name: `"` + x.Name.Name + `"`,
@@ -312,7 +312,7 @@ func (pass *InstrumentationPass) Execute(
 						Call: &ast.CallExpr{
 							Fun: &ast.SelectorExpr{
 								X: &ast.Ident{
-									Name: "span",
+									Name: "__atel_span",
 								},
 								Sel: &ast.Ident{
 									Name: "End",
@@ -354,10 +354,10 @@ func (pass *InstrumentationPass) Execute(
 					s2 := &ast.AssignStmt{
 						Lhs: []ast.Expr{
 							&ast.Ident{
-								Name: "__child_tracing_ctx",
+								Name: "__atel_child_tracing_ctx",
 							},
 							&ast.Ident{
-								Name: "span",
+								Name: "__atel_span",
 							},
 						},
 						Tok: token.DEFINE,
@@ -388,7 +388,7 @@ func (pass *InstrumentationPass) Execute(
 								Lparen: 62,
 								Args: []ast.Expr{
 									&ast.Ident{
-										Name: "__child_tracing_ctx",
+										Name: "__atel_child_tracing_ctx",
 									},
 									&ast.Ident{
 										Name: `"` + "anonymous" + `"`,
@@ -408,7 +408,7 @@ func (pass *InstrumentationPass) Execute(
 						Tok: token.ASSIGN,
 						Rhs: []ast.Expr{
 							&ast.Ident{
-								Name: "__child_tracing_ctx",
+								Name: "__atel_child_tracing_ctx",
 							},
 						},
 					}
@@ -418,7 +418,7 @@ func (pass *InstrumentationPass) Execute(
 						Call: &ast.CallExpr{
 							Fun: &ast.SelectorExpr{
 								X: &ast.Ident{
-									Name: "span",
+									Name: "__atel_span",
 								},
 								Sel: &ast.Ident{
 									Name: "End",
@@ -442,10 +442,10 @@ func (pass *InstrumentationPass) Execute(
 			s2 := &ast.AssignStmt{
 				Lhs: []ast.Expr{
 					&ast.Ident{
-						Name: "__child_tracing_ctx",
+						Name: "__atel_child_tracing_ctx",
 					},
 					&ast.Ident{
-						Name: "span",
+						Name: "__atel_span",
 					},
 				},
 				Tok: token.DEFINE,
@@ -476,7 +476,7 @@ func (pass *InstrumentationPass) Execute(
 						Lparen: 62,
 						Args: []ast.Expr{
 							&ast.Ident{
-								Name: "__child_tracing_ctx",
+								Name: "__atel_child_tracing_ctx",
 							},
 							&ast.Ident{
 								Name: `"` + "anonymous" + `"`,
@@ -496,7 +496,7 @@ func (pass *InstrumentationPass) Execute(
 				Tok: token.ASSIGN,
 				Rhs: []ast.Expr{
 					&ast.Ident{
-						Name: "__child_tracing_ctx",
+						Name: "__atel_child_tracing_ctx",
 					},
 				},
 			}
@@ -506,7 +506,7 @@ func (pass *InstrumentationPass) Execute(
 				Call: &ast.CallExpr{
 					Fun: &ast.SelectorExpr{
 						X: &ast.Ident{
-							Name: "span",
+							Name: "__atel_span",
 						},
 						Sel: &ast.Ident{
 							Name: "End",

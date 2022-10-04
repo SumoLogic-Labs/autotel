@@ -151,12 +151,12 @@ func (pass *ContextPropagationPass) Execute(
 	}
 	ast.Inspect(node, func(n ast.Node) bool {
 		ctxArg := &ast.Ident{
-			Name: "__child_tracing_ctx",
+			Name: "__atel_child_tracing_ctx",
 		}
 		ctxField := &ast.Field{
 			Names: []*ast.Ident{
 				&ast.Ident{
-					Name: "__tracing_ctx",
+					Name: "__atel_tracing_ctx",
 				},
 			},
 			Type: &ast.SelectorExpr{
