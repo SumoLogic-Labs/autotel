@@ -22,12 +22,15 @@ import (
 )
 
 const (
+	otelPrunerPassSuffix          = "_pass_pruner.go"
 	contextPassFileSuffix         = "_pass_ctx.go"
 	instrumentationPassFileSuffix = "_pass_tracing.go"
 	httpPassFileSuffix            = "_pass_http.go"
 )
 
 func ExecutePassesDumpIr(analysis *lib.Analysis) {
+
+	analysis.Execute(&lib.OtelPruner{}, otelPrunerPassSuffix, true)
 
 	fmt.Println("Http Instrumentation")
 	analysis.Execute(&http.HttpRewriter{}, httpPassFileSuffix, true)
@@ -40,6 +43,8 @@ func ExecutePassesDumpIr(analysis *lib.Analysis) {
 }
 
 func ExecutePasses(analysis *lib.Analysis) {
+
+	analysis.Execute(&lib.OtelPruner{}, otelPrunerPassSuffix, true)
 
 	fmt.Println("Http Instrumentation")
 	analysis.Execute(&http.HttpRewriter{}, httpPassFileSuffix, false)
