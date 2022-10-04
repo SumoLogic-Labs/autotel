@@ -28,16 +28,16 @@ type driver struct {
 }
 
 type i interface {
-	foo(__tracing_ctx context.Context, p int) int
+	foo(__atel_tracing_ctx context.Context, p int) int
 }
 
 type impl struct {
 }
 
-func (i impl) foo(__tracing_ctx context.Context, p int) int {
-	__child_tracing_ctx, span := otel.Tracer("foo").Start(__tracing_ctx, "foo")
-	_ = __child_tracing_ctx
-	defer span.End()
+func (i impl) foo(__atel_tracing_ctx context.Context, p int) int {
+	__atel_child_tracing_ctx, __atel_span := otel.Tracer("foo").Start(__atel_tracing_ctx, "foo")
+	_ = __atel_child_tracing_ctx
+	defer __atel_span.End()
 	return 5
 }
 
@@ -45,33 +45,33 @@ func foo(p int) int {
 	return 1
 }
 
-func (d driver) process(__tracing_ctx context.Context, a int) {
-	__child_tracing_ctx, span := otel.Tracer("process").Start(__tracing_ctx, "process")
-	_ = __child_tracing_ctx
-	defer span.End()
+func (d driver) process(__atel_tracing_ctx context.Context, a int) {
+	__atel_child_tracing_ctx, __atel_span := otel.Tracer("process").Start(__atel_tracing_ctx, "process")
+	_ = __atel_child_tracing_ctx
+	defer __atel_span.End()
 }
 
-func (e element) get(__tracing_ctx context.Context, a int) {
-	__child_tracing_ctx, span := otel.Tracer("get").Start(__tracing_ctx, "get")
-	_ = __child_tracing_ctx
-	defer span.End()
+func (e element) get(__atel_tracing_ctx context.Context, a int) {
+	__atel_child_tracing_ctx, __atel_span := otel.Tracer("get").Start(__atel_tracing_ctx, "get")
+	_ = __atel_child_tracing_ctx
+	defer __atel_span.End()
 
 }
 
 func main() {
-	ts := rtlib.NewTracingState()
-	defer rtlib.Shutdown(ts)
-	otel.SetTracerProvider(ts.Tp)
-	ctx := context.Background()
-	__child_tracing_ctx, span := otel.Tracer("main").Start(ctx, "main")
-	_ = __child_tracing_ctx
-	defer span.End()
+	__atel_ts := rtlib.NewTracingState()
+	defer rtlib.Shutdown(__atel_ts)
+	otel.SetTracerProvider(__atel_ts.Tp)
+	__atel_ctx := context.Background()
+	__atel_child_tracing_ctx, __atel_span := otel.Tracer("main").Start(__atel_ctx, "main")
+	_ = __atel_child_tracing_ctx
+	defer __atel_span.End()
 
 	rtlib.AutotelEntryPoint__()
 	d := driver{}
-	d.process(__child_tracing_ctx, 10)
-	d.e.get(__child_tracing_ctx, 5)
+	d.process(__atel_child_tracing_ctx, 10)
+	d.e.get(__atel_child_tracing_ctx, 5)
 	var in i
 	in = impl{}
-	in.foo(__child_tracing_ctx, 10)
+	in.foo(__atel_child_tracing_ctx, 10)
 }
