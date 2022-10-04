@@ -19,7 +19,10 @@ func (pass *OtelPruner) Execute(
 		switch x := n.(type) {
 		case *ast.FuncDecl:
 			for _, stmt := range x.Body.List {
-				_ = stmt
+				switch bodyStmt := stmt.(type) {
+				case *ast.Ident:
+					_ = bodyStmt
+				}
 			}
 		}
 		return true
