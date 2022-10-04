@@ -86,7 +86,7 @@ func (pass *HttpRewriter) Execute(
 					reqCtx := &ast.AssignStmt{
 						Lhs: []ast.Expr{
 							&ast.Ident{
-								Name: "__child_tracing_ctx",
+								Name: "__atel_child_tracing_ctx",
 							},
 						},
 						Tok: token.DEFINE,
@@ -108,7 +108,7 @@ func (pass *HttpRewriter) Execute(
 					span := &ast.AssignStmt{
 						Lhs: []ast.Expr{
 							&ast.Ident{
-								Name: "__http_span",
+								Name: "__atel_http_span",
 							},
 						},
 						Tok: token.DEFINE,
@@ -125,7 +125,7 @@ func (pass *HttpRewriter) Execute(
 								Lparen: 56,
 								Args: []ast.Expr{
 									&ast.Ident{
-										Name: "__child_tracing_ctx",
+										Name: "__atel_child_tracing_ctx",
 									},
 								},
 								Ellipsis: 0,
@@ -141,7 +141,7 @@ func (pass *HttpRewriter) Execute(
 						Tok: token.ASSIGN,
 						Rhs: []ast.Expr{
 							&ast.Ident{
-								Name: "__http_span",
+								Name: "__atel_http_span",
 							},
 						},
 					}
