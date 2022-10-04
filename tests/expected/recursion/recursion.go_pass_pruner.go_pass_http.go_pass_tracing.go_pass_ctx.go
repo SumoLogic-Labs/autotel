@@ -20,23 +20,23 @@ import (
 	"context"
 )
 
-func recur(__tracing_ctx context.Context, n int) {
-	__child_tracing_ctx, span := otel.Tracer("recur").Start(__tracing_ctx, "recur")
-	_ = __child_tracing_ctx
-	defer span.End()
+func recur(__atel_tracing_ctx context.Context, n int) {
+	__atel_child_tracing_ctx, __atel_span := otel.Tracer("recur").Start(__atel_tracing_ctx, "recur")
+	_ = __atel_child_tracing_ctx
+	defer __atel_span.End()
 	if n > 0 {
-		recur(__child_tracing_ctx, n-1)
+		recur(__atel_child_tracing_ctx, n-1)
 	}
 }
 
 func main() {
-	ts := rtlib.NewTracingState()
-	defer rtlib.Shutdown(ts)
-	otel.SetTracerProvider(ts.Tp)
-	ctx := context.Background()
-	__child_tracing_ctx, span := otel.Tracer("main").Start(ctx, "main")
-	_ = __child_tracing_ctx
-	defer span.End()
+	__atel_ts := rtlib.NewTracingState()
+	defer rtlib.Shutdown(__atel_ts)
+	otel.SetTracerProvider(__atel_ts.Tp)
+	__atel_ctx := context.Background()
+	__atel_child_tracing_ctx, __atel_span := otel.Tracer("main").Start(__atel_ctx, "main")
+	_ = __atel_child_tracing_ctx
+	defer __atel_span.End()
 	rtlib.AutotelEntryPoint__()
-	recur(__child_tracing_ctx, 5)
+	recur(__atel_child_tracing_ctx, 5)
 }
