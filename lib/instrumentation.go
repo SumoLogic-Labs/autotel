@@ -83,24 +83,6 @@ func (pass *InstrumentationPass) Execute(
 				visited := map[FuncDescriptor]bool{}
 				fmt.Println("\t\t\tInstrumentation FuncDecl:", fundId, pkg.TypesInfo.Defs[x.Name].Type().String())
 				if isPath(analysis.Callgraph, fun, root, visited) && fun.TypeHash() != root.TypeHash() {
-					s1 := &ast.ExprStmt{
-						X: &ast.CallExpr{
-							Fun: &ast.SelectorExpr{
-								X: &ast.Ident{
-									Name: "fmt",
-								},
-								Sel: &ast.Ident{
-									Name: "Println",
-								},
-							},
-							Args: []ast.Expr{
-								&ast.BasicLit{
-									Kind:  token.STRING,
-									Value: `"child instrumentation"`,
-								},
-							},
-						},
-					}
 					s2 := &ast.AssignStmt{
 						Lhs: []ast.Expr{
 							&ast.Ident{
@@ -178,7 +160,6 @@ func (pass *InstrumentationPass) Execute(
 							Ellipsis: 0,
 						},
 					}
-					_ = s1
 					x.Body.List = append([]ast.Stmt{s2, s3, s4}, x.Body.List...)
 					addContext = true
 					addImports = true
@@ -187,25 +168,6 @@ func (pass *InstrumentationPass) Execute(
 					if !Contains(analysis.RootFunctions, fun) {
 						return false
 					}
-					s1 := &ast.ExprStmt{
-						X: &ast.CallExpr{
-							Fun: &ast.SelectorExpr{
-								X: &ast.Ident{
-									Name: "fmt",
-								},
-								Sel: &ast.Ident{
-									Name: "Println",
-								},
-							},
-							Args: []ast.Expr{
-								&ast.BasicLit{
-									Kind:  token.STRING,
-									Value: `"root instrumentation"`,
-								},
-							},
-						},
-					}
-
 					s2 :=
 						&ast.AssignStmt{
 							Lhs: []ast.Expr{
@@ -360,7 +322,6 @@ func (pass *InstrumentationPass) Execute(
 							Ellipsis: 0,
 						},
 					}
-					_ = s1
 					x.Body.List = append([]ast.Stmt{s2, s3, s4, s5, s6, childTracingSupress, s8}, x.Body.List...)
 					addContext = true
 					addImports = true
@@ -390,24 +351,6 @@ func (pass *InstrumentationPass) Execute(
 			for _, e := range x.Rhs {
 				if funLit, ok := e.(*ast.FuncLit); ok {
 					functionLiteralPositions = append(functionLiteralPositions, funLit.Pos())
-					s1 := &ast.ExprStmt{
-						X: &ast.CallExpr{
-							Fun: &ast.SelectorExpr{
-								X: &ast.Ident{
-									Name: "fmt",
-								},
-								Sel: &ast.Ident{
-									Name: "Println",
-								},
-							},
-							Args: []ast.Expr{
-								&ast.BasicLit{
-									Kind:  token.STRING,
-									Value: `"child instrumentation"`,
-								},
-							},
-						},
-					}
 					s2 := &ast.AssignStmt{
 						Lhs: []ast.Expr{
 							&ast.Ident{
@@ -485,7 +428,6 @@ func (pass *InstrumentationPass) Execute(
 							Ellipsis: 0,
 						},
 					}
-					_ = s1
 					funLit.Body.List = append([]ast.Stmt{s2, s3, s4}, funLit.Body.List...)
 					addImports = true
 					addContext = true
@@ -496,24 +438,6 @@ func (pass *InstrumentationPass) Execute(
 				if pos == x.Pos() {
 					return false
 				}
-			}
-			s1 := &ast.ExprStmt{
-				X: &ast.CallExpr{
-					Fun: &ast.SelectorExpr{
-						X: &ast.Ident{
-							Name: "fmt",
-						},
-						Sel: &ast.Ident{
-							Name: "Println",
-						},
-					},
-					Args: []ast.Expr{
-						&ast.BasicLit{
-							Kind:  token.STRING,
-							Value: `"child instrumentation"`,
-						},
-					},
-				},
 			}
 			s2 := &ast.AssignStmt{
 				Lhs: []ast.Expr{
@@ -592,7 +516,6 @@ func (pass *InstrumentationPass) Execute(
 					Ellipsis: 0,
 				},
 			}
-			_ = s1
 			x.Body.List = append([]ast.Stmt{s2, s3, s4}, x.Body.List...)
 			addImports = true
 			addContext = true
