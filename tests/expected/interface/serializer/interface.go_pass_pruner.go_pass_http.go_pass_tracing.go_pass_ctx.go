@@ -17,5 +17,5 @@ package serializer
 import "context"
 
 type Serializer interface {
-	Serialize(__tracing_ctx context.Context,)
+	Serialize(__atel_tracing_ctx context.Context,)
 }

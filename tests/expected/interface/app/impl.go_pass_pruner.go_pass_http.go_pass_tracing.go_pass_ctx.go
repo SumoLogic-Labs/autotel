@@ -23,10 +23,10 @@ import (
 type BasicSerializer struct {
 }
 
-func (b BasicSerializer) Serialize(__tracing_ctx context.Context,) {
-	__child_tracing_ctx, span := otel.Tracer("Serialize").Start(__tracing_ctx, "Serialize")
-	_ = __child_tracing_ctx
-	defer span.End()
+func (b BasicSerializer) Serialize(__atel_tracing_ctx context.Context,) {
+	__atel_child_tracing_ctx, __atel_span := otel.Tracer("Serialize").Start(__atel_tracing_ctx, "Serialize")
+	_ = __atel_child_tracing_ctx
+	defer __atel_span.End()
 
 	fmt.Println("Serialize")
 }
