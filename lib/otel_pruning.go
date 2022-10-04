@@ -20,7 +20,7 @@ func (pass *OtelPruner) Execute(
 		case *ast.FuncDecl:
 			for _, stmt := range x.Body.List {
 				switch bodyStmt := stmt.(type) {
-				case *ast.Ident:
+				case *ast.ExprStmt:
 					_ = bodyStmt
 				}
 			}
