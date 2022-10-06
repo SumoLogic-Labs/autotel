@@ -525,12 +525,12 @@ func (pass *InstrumentationPass) Execute(
 	})
 	if addContext {
 		if !astutil.UsesImport(node, "context") {
-			imports = append(imports, Import{"", "context"})
+			imports = append(imports, Import{"", "context", Add})
 		}
 	}
 	if addImports {
 		if !astutil.UsesImport(node, "go.opentelemetry.io/otel") {
-			imports = append(imports, Import{"otel", "go.opentelemetry.io/otel"})
+			imports = append(imports, Import{"otel", "go.opentelemetry.io/otel", Add})
 		}
 	}
 	return imports

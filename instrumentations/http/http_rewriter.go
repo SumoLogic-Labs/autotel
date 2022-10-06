@@ -149,7 +149,7 @@ func (pass *HttpRewriter) Execute(
 					addImports = true
 					addContext = true
 					if !astutil.UsesImport(node, "go.opentelemetry.io/otel/trace") {
-						imports = append(imports, lib.Import{"", "go.opentelemetry.io/otel/trace"})
+						imports = append(imports, lib.Import{"", "go.opentelemetry.io/otel/trace", lib.Add})
 					}
 				}
 			}
@@ -314,15 +314,15 @@ func (pass *HttpRewriter) Execute(
 
 	if addContext {
 		if !astutil.UsesImport(node, "context") {
-			imports = append(imports, lib.Import{"", "context"})
+			imports = append(imports, lib.Import{"", "context", lib.Add})
 		}
 	}
 	if addImports {
 		if !astutil.UsesImport(node, "go.opentelemetry.io/otel") {
-			imports = append(imports, lib.Import{"otel", "go.opentelemetry.io/otel"})
+			imports = append(imports, lib.Import{"otel", "go.opentelemetry.io/otel", lib.Add})
 		}
 		if !astutil.UsesImport(node, "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp") {
-			imports = append(imports, lib.Import{"", "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"})
+			imports = append(imports, lib.Import{"", "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp", lib.Add})
 		}
 	}
 	return imports

@@ -35,9 +35,17 @@ type Analysis struct {
 	Interfaces     map[string]bool
 }
 
+type importaction int
+
+const (
+	Add importaction = iota
+	Remove
+)
+
 type Import struct {
 	NamedPackage string
 	Package      string
+	ImportAction importaction
 }
 
 type AnalysisPass interface {
@@ -70,10 +78,18 @@ func (analysis *Analysis) Execute(pass AnalysisPass, fileSuffix string, leaveOri
 			}
 			imports := pass.Execute(node, analysis, pkg, pkgs)
 			for _, imp := range imports {
-				if len(imp.NamedPackage) > 0 {
-					astutil.AddNamedImport(fset, node, imp.NamedPackage, imp.Package)
+				if imp.ImportAction == Add {
+					if len(imp.NamedPackage) > 0 {
+						astutil.AddNamedImport(fset, node, imp.NamedPackage, imp.Package)
+					} else {
+						astutil.AddImport(fset, node, imp.Package)
+					}
 				} else {
-					astutil.AddImport(fset, node, imp.Package)
+					if len(imp.NamedPackage) > 0 {
+						astutil.DeleteNamedImport(fset, node, imp.NamedPackage, imp.Package)
+					} else {
+						astutil.DeleteImport(fset, node, imp.Package)
+					}
 				}
 			}
 			printer.Fprint(out, fset, node)

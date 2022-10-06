@@ -240,7 +240,7 @@ func (pass *ContextPropagationPass) Execute(
 	})
 	if addImports {
 		if !astutil.UsesImport(node, "context") {
-			imports = append(imports, Import{"", "context"})
+			imports = append(imports, Import{"", "context", Add})
 		}
 	}
 	return imports
