@@ -1,7 +1,6 @@
 package lib
 
 import (
-	"fmt"
 	"go/ast"
 	"strings"
 
@@ -23,6 +22,62 @@ func removeExpr(slice []ast.Expr, s int) []ast.Expr {
 type OtelPruner struct {
 }
 
+func inspectFuncContent(fType *ast.FuncType, fBody *ast.BlockStmt) {
+	for index := 0; index < len(fType.Params.List); index++ {
+		param := fType.Params.List[index]
+		for _, ident := range param.Names {
+			if strings.Contains(ident.Name, "__atel_") {
+				fType.Params.List = removeField(fType.Params.List, index)
+				index--
+			}
+		}
+	}
+	for index := 0; index < len(fBody.List); index++ {
+		stmt := fBody.List[index]
+		switch bodyStmt := stmt.(type) {
+		case *ast.AssignStmt:
+			if ident, ok := bodyStmt.Lhs[0].(*ast.Ident); ok {
+				if strings.Contains(ident.Name, "__atel_") {
+					fBody.List = removeStmt(fBody.List, index)
+					index--
+				}
+			}
+			if ident, ok := bodyStmt.Rhs[0].(*ast.Ident); ok {
+				if strings.Contains(ident.Name, "__atel_") {
+					fBody.List = removeStmt(fBody.List, index)
+					index--
+				}
+			}
+		case *ast.ExprStmt:
+			if call, ok := bodyStmt.X.(*ast.CallExpr); ok {
+				if sel, ok := call.Fun.(*ast.SelectorExpr); ok {
+					if strings.Contains(sel.Sel.Name, "SetTracerProvider") {
+						fBody.List = removeStmt(fBody.List, index)
+						index--
+					}
+				}
+			}
+		case *ast.DeferStmt:
+			if sel, ok := bodyStmt.Call.Fun.(*ast.SelectorExpr); ok {
+				if strings.Contains(sel.Sel.Name, "Shutdown") {
+					if ident, ok := sel.X.(*ast.Ident); ok {
+						if strings.Contains(ident.Name, "rtlib") {
+							fBody.List = removeStmt(fBody.List, index)
+							index--
+						}
+					}
+				}
+				if ident, ok := sel.X.(*ast.Ident); ok {
+					if strings.Contains(ident.Name, "__atel_") {
+						fBody.List = removeStmt(fBody.List, index)
+						index--
+					}
+				}
+			}
+		}
+	}
+}
+
 func (pass *OtelPruner) Execute(
 	node *ast.File,
 	analysis *Analysis,
@@ -30,74 +85,20 @@ func (pass *OtelPruner) Execute(
 	pkgs []*packages.Package) []Import {
 	var imports []Import
 	ast.Inspect(node, func(n ast.Node) bool {
-
 		switch x := n.(type) {
 		case *ast.FuncDecl:
-			for index := 0; index < len(x.Type.Params.List); index++ {
-				param := x.Type.Params.List[index]
-				for _, ident := range param.Names {
+			inspectFuncContent(x.Type, x.Body)
+		case *ast.CallExpr:
+			for argIndex := 0; argIndex < len(x.Args); argIndex++ {
+				if ident, ok := x.Args[argIndex].(*ast.Ident); ok {
 					if strings.Contains(ident.Name, "__atel_") {
-						fmt.Println("__atel_")
-						x.Type.Params.List = removeField(x.Type.Params.List, index)
-						index--
+						x.Args = removeExpr(x.Args, argIndex)
+						argIndex--
 					}
 				}
 			}
-			for index := 0; index < len(x.Body.List); index++ {
-				stmt := x.Body.List[index]
-				switch bodyStmt := stmt.(type) {
-				case *ast.AssignStmt:
-					if ident, ok := bodyStmt.Lhs[0].(*ast.Ident); ok {
-						if strings.Contains(ident.Name, "__atel_") {
-							fmt.Println("__atel_")
-							x.Body.List = removeStmt(x.Body.List, index)
-							index--
-						}
-					}
-					if ident, ok := bodyStmt.Rhs[0].(*ast.Ident); ok {
-						if strings.Contains(ident.Name, "__atel_") {
-							fmt.Println("__atel_")
-							x.Body.List = removeStmt(x.Body.List, index)
-							index--
-						}
-					}
-				case *ast.ExprStmt:
-					if call, ok := bodyStmt.X.(*ast.CallExpr); ok {
-						if sel, ok := call.Fun.(*ast.SelectorExpr); ok {
-							if strings.Contains(sel.Sel.Name, "SetTracerProvider") {
-								x.Body.List = removeStmt(x.Body.List, index)
-								index--
-							}
-						}
-						for argIndex := 0; argIndex < len(call.Args); argIndex++ {
-							if ident, ok := call.Args[argIndex].(*ast.Ident); ok {
-								if strings.Contains(ident.Name, "__atel_") {
-									fmt.Println("__atel_")
-									call.Args = removeExpr(call.Args, argIndex)
-									argIndex--
-								}
-							}
-						}
-					}
-				case *ast.DeferStmt:
-					if sel, ok := bodyStmt.Call.Fun.(*ast.SelectorExpr); ok {
-						if strings.Contains(sel.Sel.Name, "Shutdown") {
-							if ident, ok := sel.X.(*ast.Ident); ok {
-								if strings.Contains(ident.Name, "rtlib") {
-									x.Body.List = removeStmt(x.Body.List, index)
-									index--
-								}
-							}
-						}
-						if ident, ok := sel.X.(*ast.Ident); ok {
-							if strings.Contains(ident.Name, "__atel_") {
-								x.Body.List = removeStmt(x.Body.List, index)
-								index--
-							}
-						}
-					}
-				}
-			}
+		case *ast.FuncLit:
+			inspectFuncContent(x.Type, x.Body)
 		}
 		return true
 	})
