@@ -29,6 +29,7 @@ func usage() {
 	fmt.Println("\t\tinject                                 (injects open telemetry calls into project code)")
 	fmt.Println("\t\tinject-dump-ir                         (injects open telemetry calls into project code and intermediate passes)")
 	fmt.Println("\t\tinject-using-graph graph-file          (injects open telemetry calls into project code using provided graph information)")
+	fmt.Println("\t\tprune                                  (prune open telemetry calls")
 	fmt.Println("\t\tdumpcfg                                (dumps control flow graph)")
 	fmt.Println("\t\tgencfg                                 (generates json representation of control flow graph)")
 	fmt.Println("\t\trootfunctions                          (dumps root functions)")
@@ -41,6 +42,7 @@ func replUsage() {
 	fmt.Println("\t\tinject                                 (injects open telemetry calls into project code)")
 	fmt.Println("\t\tinject-dump-ir                         (injects open telemetry calls into project code and intermediate passes)")
 	fmt.Println("\t\tinject-using-graph graph-file          (injects open telemetry calls into project code using provided graph information)")
+	fmt.Println("\t\tprune                                  (prune open telemetry calls")
 	fmt.Println("\t\tdumpcfg                                (dumps control flow graph)")
 	fmt.Println("\t\tgencfg                                 (generates json representation of control flow graph)")
 	fmt.Println("\t\trootfunctions                          (dumps root functions)")
@@ -292,6 +294,40 @@ func executeCommand(arglist []string, autotelState *AutotelState) {
 	if arglist[1] == "--revert" {
 		projectPath := arglist[2]
 		alib.Revert(projectPath)
+	}
+	if arglist[1] == "--prune" {
+		projectPath := arglist[2]
+		packagePattern := arglist[3]
+		var rootFunctions []alib.FuncDescriptor
+		var funcDecls map[alib.FuncDescriptor]bool
+		var backwardCallGraph map[alib.FuncDescriptor][]alib.FuncDescriptor
+		var interfaces map[string]bool
+		interfaces = alib.FindInterfaces(projectPath, packagePattern)
+		rootFunctions = append(rootFunctions, alib.FindRootFunctions(projectPath, packagePattern)...)
+		funcDecls = alib.FindFuncDecls(projectPath, packagePattern, interfaces)
+		backwardCallGraph = alib.BuildCallGraph(projectPath, packagePattern, funcDecls, interfaces)
+
+		autotelState.ProjectPath = projectPath
+		autotelState.PackagePattern = packagePattern
+		autotelState.FuncDecls = funcDecls
+		autotelState.RootFunctions = rootFunctions
+		autotelState.CallGraph = backwardCallGraph
+		autotelState.Interfaces = interfaces
+		fmt.Println("\n\tchild parent")
+		for k, v := range backwardCallGraph {
+			fmt.Print("\n\t", k)
+			fmt.Print(" ", v)
+		}
+		fmt.Println("")
+		analysis := &alib.Analysis{
+			ProjectPath:    projectPath,
+			PackagePattern: packagePattern,
+			RootFunctions:  rootFunctions,
+			FuncDecls:      funcDecls,
+			Callgraph:      backwardCallGraph,
+			Interfaces:     interfaces}
+		analysis.Execute(&alib.OtelPruner{}, otelPrunerPassSuffix, false)
+		fmt.Println("\tpruning done")
 	}
 }
 

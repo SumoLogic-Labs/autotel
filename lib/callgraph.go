@@ -281,10 +281,12 @@ func BuildCallGraph(
 
 						pkgPath = GetPkgNameFromDefsTable(pkg, x.Name)
 					}
-					funId := pkgPath + "." + pkg.TypesInfo.Defs[x.Name].Name()
-					funcDecls[FuncDescriptor{funId, pkg.TypesInfo.Defs[x.Name].Type().String(), false}] = true
-					currentFun = FuncDescriptor{funId, pkg.TypesInfo.Defs[x.Name].Type().String(), false}
-					fmt.Println("\t\t\tFuncDecl:", funId, pkg.TypesInfo.Defs[x.Name].Type().String())
+					if pkg.TypesInfo.Defs[x.Name] != nil {
+						funId := pkgPath + "." + pkg.TypesInfo.Defs[x.Name].Name()
+						funcDecls[FuncDescriptor{funId, pkg.TypesInfo.Defs[x.Name].Type().String(), false}] = true
+						currentFun = FuncDescriptor{funId, pkg.TypesInfo.Defs[x.Name].Type().String(), false}
+						fmt.Println("\t\t\tFuncDecl:", funId, pkg.TypesInfo.Defs[x.Name].Type().String())
+					}
 				}
 				return true
 			})

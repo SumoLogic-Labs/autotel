@@ -37,6 +37,10 @@ var testcases = map[string]string{
 	"./tests/selector":   "./tests/expected/selector",
 }
 
+var pruningtestcases = map[string]string{
+	"./tests/pruning": "",
+}
+
 var failures []string
 
 func injectAndDumpIr(root string, packagePattern string) {
@@ -55,6 +59,25 @@ func injectAndDumpIr(root string, packagePattern string) {
 	fmt.Println("")
 	analysis := &alib.Analysis{root, packagePattern, rootFunctions, funcDecls, backwardCallGraph, interfaces}
 	ExecutePassesDumpIr(analysis)
+}
+
+func executePruning(root string, packagePattern string) {
+	var rootFunctions []alib.FuncDescriptor
+
+	rootFunctions = append(rootFunctions, alib.FindRootFunctions(root, packagePattern)...)
+	interfaces := alib.FindInterfaces(root, packagePattern)
+	funcDecls := alib.FindFuncDecls(root, packagePattern, interfaces)
+	backwardCallGraph := alib.BuildCallGraph(root, packagePattern, funcDecls, interfaces)
+
+	fmt.Println("\n\tchild parent")
+	for k, v := range backwardCallGraph {
+		fmt.Print("\n\t", k)
+		fmt.Print(" ", v)
+	}
+	fmt.Println("")
+	analysis := &alib.Analysis{root, packagePattern, rootFunctions, funcDecls, backwardCallGraph, interfaces}
+	analysis.Execute(&lib.OtelPruner{}, otelPrunerPassSuffix, true)
+
 }
 
 func Test(t *testing.T) {
