@@ -14,13 +14,26 @@
 
 package main
 
-import "github.com/pdelewski/autotel/rtlib"
+import (
+	"github.com/pdelewski/autotel/rtlib"
+	otel "go.opentelemetry.io/otel"
+	"context"
+)
 
-func hello(n int) {
-    
+func hello(__atel_tracing_ctx context.Context, n int) {
+	__atel_child_tracing_ctx, __atel_span := otel.Tracer("hello").Start(__atel_tracing_ctx, "hello")
+	_ = __atel_child_tracing_ctx
+	defer __atel_span.End()
 }
 
 func main() {
-    rtlib.AutotelEntryPoint__()
-    hello(5)
+	__atel_ts := rtlib.NewTracingState()
+	defer rtlib.Shutdown(__atel_ts)
+	otel.SetTracerProvider(__atel_ts.Tp)
+	__atel_ctx := context.Background()
+	__atel_child_tracing_ctx, __atel_span := otel.Tracer("main").Start(__atel_ctx, "main")
+	_ = __atel_child_tracing_ctx
+	defer __atel_span.End()
+	rtlib.AutotelEntryPoint__()
+	hello(__atel_child_tracing_ctx, 5)
 }
