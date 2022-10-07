@@ -99,6 +99,25 @@ func (pass *OtelPruner) Execute(
 			}
 		case *ast.FuncLit:
 			inspectFuncContent(x.Type, x.Body)
+		case *ast.TypeSpec:
+			iface, ok := x.Type.(*ast.InterfaceType)
+			if !ok {
+				return true
+			}
+			for _, method := range iface.Methods.List {
+				funcType, ok := method.Type.(*ast.FuncType)
+				if !ok {
+					continue
+				}
+				for argIndex := 0; argIndex < len(funcType.Params.List); argIndex++ {
+					for _, ident := range funcType.Params.List[argIndex].Names {
+						if strings.Contains(ident.Name, "__atel_") {
+							funcType.Params.List = removeField(funcType.Params.List, argIndex)
+							argIndex--
+						}
+					}
+				}
+			}
 		}
 		return true
 	})
