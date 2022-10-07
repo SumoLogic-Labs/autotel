@@ -102,5 +102,9 @@ func (pass *OtelPruner) Execute(
 		}
 		return true
 	})
+	imports = append(imports, Import{"__atel_context", "context", Remove})
+	imports = append(imports, Import{"__atel_otel", "go.opentelemetry.io/otel", Remove})
+	imports = append(imports, Import{"__atel_otelhttp", "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp", Remove})
+
 	return imports
 }

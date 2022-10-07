@@ -19,7 +19,6 @@ import (
 	"go/ast"
 	"go/token"
 
-	"golang.org/x/tools/go/ast/astutil"
 	"golang.org/x/tools/go/packages"
 )
 
@@ -99,7 +98,7 @@ func (pass *InstrumentationPass) Execute(
 									X: &ast.CallExpr{
 										Fun: &ast.SelectorExpr{
 											X: &ast.Ident{
-												Name: "otel",
+												Name: "__atel_otel",
 											},
 											Sel: &ast.Ident{
 												Name: "Tracer",
@@ -217,7 +216,7 @@ func (pass *InstrumentationPass) Execute(
 						X: &ast.CallExpr{
 							Fun: &ast.SelectorExpr{
 								X: &ast.Ident{
-									Name: "otel",
+									Name: "__atel_otel",
 								},
 								Sel: &ast.Ident{
 									Name: "SetTracerProvider",
@@ -248,7 +247,7 @@ func (pass *InstrumentationPass) Execute(
 							&ast.CallExpr{
 								Fun: &ast.SelectorExpr{
 									X: &ast.Ident{
-										Name: "context",
+										Name: "__atel_context",
 									},
 									Sel: &ast.Ident{
 										Name: "Background",
@@ -275,7 +274,7 @@ func (pass *InstrumentationPass) Execute(
 									X: &ast.CallExpr{
 										Fun: &ast.SelectorExpr{
 											X: &ast.Ident{
-												Name: "otel",
+												Name: "__atel_otel",
 											},
 											Sel: &ast.Ident{
 												Name: "Tracer",
@@ -367,7 +366,7 @@ func (pass *InstrumentationPass) Execute(
 									X: &ast.CallExpr{
 										Fun: &ast.SelectorExpr{
 											X: &ast.Ident{
-												Name: "otel",
+												Name: "__atel_otel",
 											},
 											Sel: &ast.Ident{
 												Name: "Tracer",
@@ -455,7 +454,7 @@ func (pass *InstrumentationPass) Execute(
 							X: &ast.CallExpr{
 								Fun: &ast.SelectorExpr{
 									X: &ast.Ident{
-										Name: "otel",
+										Name: "__atel_otel",
 									},
 									Sel: &ast.Ident{
 										Name: "Tracer",
@@ -524,14 +523,10 @@ func (pass *InstrumentationPass) Execute(
 		return true
 	})
 	if addContext {
-		if !astutil.UsesImport(node, "context") {
-			imports = append(imports, Import{"", "context", Add})
-		}
+		imports = append(imports, Import{"__atel_context", "context", Add})
 	}
 	if addImports {
-		if !astutil.UsesImport(node, "go.opentelemetry.io/otel") {
-			imports = append(imports, Import{"otel", "go.opentelemetry.io/otel", Add})
-		}
+		imports = append(imports, Import{"__atel_otel", "go.opentelemetry.io/otel", Add})
 	}
 	return imports
 }

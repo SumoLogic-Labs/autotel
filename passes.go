@@ -29,9 +29,6 @@ const (
 )
 
 func ExecutePassesDumpIr(analysis *lib.Analysis) {
-
-	analysis.Execute(&lib.OtelPruner{}, otelPrunerPassSuffix, true)
-
 	fmt.Println("Http Instrumentation")
 	analysis.Execute(&http.HttpRewriter{}, httpPassFileSuffix, true)
 
@@ -43,9 +40,6 @@ func ExecutePassesDumpIr(analysis *lib.Analysis) {
 }
 
 func ExecutePasses(analysis *lib.Analysis) {
-
-	analysis.Execute(&lib.OtelPruner{}, otelPrunerPassSuffix, false)
-
 	fmt.Println("Http Instrumentation")
 	analysis.Execute(&http.HttpRewriter{}, httpPassFileSuffix, false)
 
