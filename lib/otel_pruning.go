@@ -97,6 +97,18 @@ func (pass *OtelPruner) Execute(
 					}
 				}
 			}
+			for argIndex := 0; argIndex < len(x.Args); argIndex++ {
+				if c, ok := x.Args[argIndex].(*ast.CallExpr); ok {
+					if sel, ok := c.Fun.(*ast.SelectorExpr); ok {
+						if ident, ok := sel.X.(*ast.Ident); ok {
+							if strings.Contains(ident.Name, "__atel_") {
+								x.Args = removeExpr(x.Args, argIndex)
+								argIndex--
+							}
+						}
+					}
+				}
+			}
 		case *ast.FuncLit:
 			inspectFuncContent(x.Type, x.Body)
 		case *ast.TypeSpec:
