@@ -60,7 +60,7 @@ type AutotelState struct {
 	PackagePattern string
 }
 
-func prune(projectPath string, packagePattern string) {
+func Prune(projectPath string, packagePattern string) {
 	var rootFunctions []alib.FuncDescriptor
 	var funcDecls map[alib.FuncDescriptor]bool
 	var backwardCallGraph map[alib.FuncDescriptor][]alib.FuncDescriptor
@@ -96,7 +96,7 @@ func executeCommand(arglist []string, autotelState *AutotelState) {
 	if arglist[1] == "--inject" {
 		projectPath := arglist[2]
 		packagePattern := arglist[3]
-		prune(projectPath, packagePattern)
+		Prune(projectPath, packagePattern)
 		var rootFunctions []alib.FuncDescriptor
 		var funcDecls map[alib.FuncDescriptor]bool
 		var backwardCallGraph map[alib.FuncDescriptor][]alib.FuncDescriptor
@@ -151,7 +151,7 @@ func executeCommand(arglist []string, autotelState *AutotelState) {
 	if arglist[1] == "--inject-dump-ir" {
 		projectPath := arglist[2]
 		packagePattern := arglist[3]
-		prune(projectPath, packagePattern)
+		Prune(projectPath, packagePattern)
 		var rootFunctions []alib.FuncDescriptor
 		var funcDecls map[alib.FuncDescriptor]bool
 		var backwardCallGraph map[alib.FuncDescriptor][]alib.FuncDescriptor
@@ -327,7 +327,7 @@ func executeCommand(arglist []string, autotelState *AutotelState) {
 	if arglist[1] == "--prune" {
 		projectPath := arglist[2]
 		packagePattern := arglist[3]
-		prune(projectPath, packagePattern)
+		Prune(projectPath, packagePattern)
 	}
 }
 

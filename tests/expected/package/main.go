@@ -16,10 +16,10 @@ package main
 
 import (
 	"os"
-	"context"
+	__atel_context "context"
 
 	"github.com/pdelewski/autotel/rtlib"
-	otel "go.opentelemetry.io/otel"
+	__atel_otel "go.opentelemetry.io/otel"
 )
 
 func Close() error {
@@ -29,9 +29,9 @@ func Close() error {
 func main() {
 	__atel_ts := rtlib.NewTracingState()
 	defer rtlib.Shutdown(__atel_ts)
-	otel.SetTracerProvider(__atel_ts.Tp)
-	__atel_ctx := context.Background()
-	__atel_child_tracing_ctx, __atel_span := otel.Tracer("main").Start(__atel_ctx, "main")
+	__atel_otel.SetTracerProvider(__atel_ts.Tp)
+	__atel_ctx := __atel_context.Background()
+	__atel_child_tracing_ctx, __atel_span := __atel_otel.Tracer("main").Start(__atel_ctx, "main")
 	_ = __atel_child_tracing_ctx
 	defer __atel_span.End()
 	rtlib.AutotelEntryPoint__()

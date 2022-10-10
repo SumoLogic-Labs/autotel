@@ -17,17 +17,12 @@ package lib
 import (
 	"os"
 	"path/filepath"
-	"regexp"
 )
 
 func SearchFiles(root string, substring string, ext string) []string {
 	var files []string
-	libRegEx, e := regexp.Compile(substring)
-	if e != nil {
-		return files
-	}
 	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
-		if libRegEx.MatchString(path) {
+		if filepath.Ext(path) == ext {
 			files = append(files, path)
 		}
 		return nil

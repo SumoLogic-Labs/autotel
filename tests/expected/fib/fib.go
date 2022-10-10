@@ -16,26 +16,23 @@ package main
 
 import (
 	"fmt"
-	"context"
-	otel "go.opentelemetry.io/otel"
+	__atel_context "context"
+	__atel_otel "go.opentelemetry.io/otel"
 )
 
-func foo(__atel_tracing_ctx context.Context,) {
-	__atel_child_tracing_ctx, __atel_span := otel.Tracer("foo").Start(__atel_tracing_ctx, "foo")
+func foo(__atel_tracing_ctx __atel_context.Context,) {
+	__atel_child_tracing_ctx, __atel_span := __atel_otel.Tracer("foo").Start(__atel_tracing_ctx, "foo")
 	_ = __atel_child_tracing_ctx
 	defer __atel_span.End()
 	fmt.Println("foo")
 }
 
-func FibonacciHelper(__atel_tracing_ctx context.Context, n uint) (uint64, error) {
-	__atel_child_tracing_ctx, __atel_span := otel.Tracer("FibonacciHelper").Start(__atel_tracing_ctx, "FibonacciHelper")
+func FibonacciHelper(__atel_tracing_ctx __atel_context.Context, n uint) (uint64, error) {
+	__atel_child_tracing_ctx, __atel_span := __atel_otel.Tracer("FibonacciHelper").Start(__atel_tracing_ctx, "FibonacciHelper")
 	_ = __atel_child_tracing_ctx
 	defer __atel_span.End()
 	func() {
-		__atel_child_tracing_ctx, __atel_span := otel.
-
-			// Fibonacci returns the n-th fibonacci number.
-			Tracer("anonymous").Start(__atel_child_tracing_ctx, "anonymous")
+		__atel_child_tracing_ctx, __atel_span := __atel_otel.Tracer("anonymous").Start(__atel_child_tracing_ctx, "anonymous")
 		_ = __atel_child_tracing_ctx
 		defer __atel_span.End()
 		foo(__atel_child_tracing_ctx)
@@ -43,8 +40,8 @@ func FibonacciHelper(__atel_tracing_ctx context.Context, n uint) (uint64, error)
 	return Fibonacci(__atel_child_tracing_ctx, n)
 }
 
-func Fibonacci(__atel_tracing_ctx context.Context, n uint) (uint64, error) {
-	__atel_child_tracing_ctx, __atel_span := otel.Tracer("Fibonacci").Start(__atel_tracing_ctx, "Fibonacci")
+func Fibonacci(__atel_tracing_ctx __atel_context.Context, n uint) (uint64, error) {
+	__atel_child_tracing_ctx, __atel_span := __atel_otel.Tracer("Fibonacci").Start(__atel_tracing_ctx, "Fibonacci")
 	_ = __atel_child_tracing_ctx
 	defer __atel_span.End()
 	if n <= 1 {

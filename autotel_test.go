@@ -43,7 +43,7 @@ var pruningtestcases = map[string]string{
 
 var failures []string
 
-func injectAndDumpIr(root string, packagePattern string) {
+func inject(root string, packagePattern string) {
 	var rootFunctions []alib.FuncDescriptor
 
 	rootFunctions = append(rootFunctions, alib.FindRootFunctions(root, packagePattern)...)
@@ -58,7 +58,7 @@ func injectAndDumpIr(root string, packagePattern string) {
 	}
 	fmt.Println("")
 	analysis := &alib.Analysis{root, packagePattern, rootFunctions, funcDecls, backwardCallGraph, interfaces}
-	ExecutePassesDumpIr(analysis)
+	ExecutePasses(analysis)
 }
 
 func executePruning(root string, packagePattern string) {
@@ -83,9 +83,9 @@ func executePruning(root string, packagePattern string) {
 func Test(t *testing.T) {
 
 	for k, v := range testcases {
-		injectAndDumpIr(k, "./...")
-		files := lib.SearchFiles(k, "_pass", ".go")
-		expectedFiles := lib.SearchFiles(v, "_pass", ".go")
+		inject(k, "./...")
+		files := lib.SearchFiles(k, "", ".go")
+		expectedFiles := lib.SearchFiles(v, "", ".go")
 		numOfFiles := len(expectedFiles)
 		numOfComparisons := 0
 		for _, file := range files {
@@ -109,7 +109,7 @@ func Test(t *testing.T) {
 		if numOfFiles != numOfComparisons {
 			panic("not all files were compared")
 		}
-		lib.Revert(k)
+		Prune(k, "./...")
 	}
 	for _, f := range failures {
 		fmt.Println("FAILURE : ", f)

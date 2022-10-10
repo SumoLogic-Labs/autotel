@@ -16,14 +16,14 @@ package main
 
 import (
 	"fmt"
-	"context"
+	__atel_context "context"
 
 	"github.com/pdelewski/autotel/rtlib"
-	otel "go.opentelemetry.io/otel"
+	__atel_otel "go.opentelemetry.io/otel"
 )
 
-func foo(__atel_tracing_ctx context.Context,) {
-	__atel_child_tracing_ctx, __atel_span := otel.Tracer("foo").Start(__atel_tracing_ctx, "foo")
+func foo(__atel_tracing_ctx __atel_context.Context,) {
+	__atel_child_tracing_ctx, __atel_span := __atel_otel.Tracer("foo").Start(__atel_tracing_ctx, "foo")
 	_ = __atel_child_tracing_ctx
 	defer __atel_span.End()
 }
@@ -31,16 +31,16 @@ func foo(__atel_tracing_ctx context.Context,) {
 func main() {
 	__atel_ts := rtlib.NewTracingState()
 	defer rtlib.Shutdown(__atel_ts)
-	otel.SetTracerProvider(__atel_ts.Tp)
-	__atel_ctx := context.Background()
-	__atel_child_tracing_ctx, __atel_span := otel.Tracer("main").Start(__atel_ctx, "main")
+	__atel_otel.SetTracerProvider(__atel_ts.Tp)
+	__atel_ctx := __atel_context.Background()
+	__atel_child_tracing_ctx, __atel_span := __atel_otel.Tracer("main").Start(__atel_ctx, "main")
 	_ = __atel_child_tracing_ctx
 	defer __atel_span.End()
 	rtlib.AutotelEntryPoint__()
 	messages := make(chan string)
 
 	go func() {
-		__atel_child_tracing_ctx, __atel_span := otel.Tracer("anonymous").Start(__atel_child_tracing_ctx, "anonymous")
+		__atel_child_tracing_ctx, __atel_span := __atel_otel.Tracer("anonymous").Start(__atel_child_tracing_ctx, "anonymous")
 		_ = __atel_child_tracing_ctx
 		defer __atel_span.End()
 		messages <- "ping"
