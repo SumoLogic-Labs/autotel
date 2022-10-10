@@ -14,7 +14,11 @@
 
 package main
 
-import "github.com/pdelewski/autotel/rtlib"
+import (
+	"github.com/pdelewski/autotel/rtlib"
+	__atel_otel "go.opentelemetry.io/otel"
+	__atel_context "context"
+)
 
 type element struct {
 }
@@ -24,13 +28,16 @@ type driver struct {
 }
 
 type i interface {
-	foo(p int) int
+	foo(__atel_tracing_ctx __atel_context.Context, p int) int
 }
 
 type impl struct {
 }
 
-func (i impl) foo(p int) int {
+func (i impl) foo(__atel_tracing_ctx __atel_context.Context, p int) int {
+	__atel_child_tracing_ctx, __atel_span := __atel_otel.Tracer("foo").Start(__atel_tracing_ctx, "foo")
+	_ = __atel_child_tracing_ctx
+	defer __atel_span.End()
 	return 5
 }
 
@@ -38,20 +45,34 @@ func foo(p int) int {
 	return 1
 }
 
-func (d driver) process(a int) {
+func (d driver) process(__atel_tracing_ctx __atel_context.Context, a int) {
+	__atel_child_tracing_ctx, __atel_span := __atel_otel.Tracer("process").Start(__atel_tracing_ctx, "process")
+	_ = __atel_child_tracing_ctx
+	defer __atel_span.End()
 
 }
 
-func (e element) get(a int) {
+func (e element) get(__atel_tracing_ctx __atel_context.Context, a int) {
+	__atel_child_tracing_ctx, __atel_span := __atel_otel.Tracer("get").Start(__atel_tracing_ctx, "get")
+	_ = __atel_child_tracing_ctx
+	defer __atel_span.End()
 
 }
 
 func main() {
+	__atel_ts := rtlib.NewTracingState()
+	defer rtlib.Shutdown(__atel_ts)
+	__atel_otel.SetTracerProvider(__atel_ts.Tp)
+	__atel_ctx := __atel_context.Background()
+	__atel_child_tracing_ctx, __atel_span := __atel_otel.Tracer("main").Start(__atel_ctx, "main")
+	_ = __atel_child_tracing_ctx
+	defer __atel_span.End()
+
 	rtlib.AutotelEntryPoint__()
 	d := driver{}
-	d.process(10)
-	d.e.get(5)
+	d.process(__atel_child_tracing_ctx, 10)
+	d.e.get(__atel_child_tracing_ctx, 5)
 	var in i
 	in = impl{}
-	in.foo(10)
+	in.foo(__atel_child_tracing_ctx, 10)
 }
