@@ -39,9 +39,11 @@ func foo(p int) int {
 }
 
 func (d driver) process(a int) {
+
 }
 
 func (e element) get(a int) {
+
 }
 
 func main() {
