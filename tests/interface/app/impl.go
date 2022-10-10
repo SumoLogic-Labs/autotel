@@ -14,11 +14,14 @@
 
 package app
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type BasicSerializer struct {
 }
 
 func (b BasicSerializer) Serialize() {
+
 	fmt.Println("Serialize")
 }
