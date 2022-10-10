@@ -19,7 +19,6 @@ import (
 	"go/token"
 
 	"github.com/sumologic-labs/autotel/lib"
-	"golang.org/x/tools/go/ast/astutil"
 	"golang.org/x/tools/go/packages"
 )
 
@@ -116,7 +115,7 @@ func (pass *HttpRewriter) Execute(
 							&ast.CallExpr{
 								Fun: &ast.SelectorExpr{
 									X: &ast.Ident{
-										Name: "trace",
+										Name: "__atel_trace",
 									},
 									Sel: &ast.Ident{
 										Name: "SpanFromContext",
@@ -148,9 +147,9 @@ func (pass *HttpRewriter) Execute(
 					funLit.Body.List = append([]ast.Stmt{reqCtx, span, spanSupress}, funLit.Body.List...)
 					addImports = true
 					addContext = true
-					if !astutil.UsesImport(node, "go.opentelemetry.io/otel/trace") {
-						imports = append(imports, lib.Import{"", "go.opentelemetry.io/otel/trace", lib.Add})
-					}
+
+					imports = append(imports, lib.Import{"__atel_trace", "go.opentelemetry.io/otel/trace", lib.Add})
+
 				}
 			}
 		}
@@ -190,7 +189,7 @@ func (pass *HttpRewriter) Execute(
 						&ast.CallExpr{
 							Fun: &ast.SelectorExpr{
 								X: &ast.Ident{
-									Name: "otelhttp",
+									Name: "__atel_otelhttp",
 								},
 								Sel: &ast.Ident{
 									Name: "NewHandler",
@@ -279,7 +278,7 @@ func (pass *HttpRewriter) Execute(
 									Value: &ast.CallExpr{
 										Fun: &ast.SelectorExpr{
 											X: &ast.Ident{
-												Name: "otelhttp",
+												Name: "__atel_otelhttp",
 											},
 											Sel: &ast.Ident{
 												Name: "NewTransport",
@@ -313,17 +312,11 @@ func (pass *HttpRewriter) Execute(
 	})
 
 	if addContext {
-		if !astutil.UsesImport(node, "context") {
-			imports = append(imports, lib.Import{"", "context", lib.Add})
-		}
+		imports = append(imports, lib.Import{"__atel_context", "context", lib.Add})
 	}
 	if addImports {
-		if !astutil.UsesImport(node, "go.opentelemetry.io/otel") {
-			imports = append(imports, lib.Import{"otel", "go.opentelemetry.io/otel", lib.Add})
-		}
-		if !astutil.UsesImport(node, "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp") {
-			imports = append(imports, lib.Import{"", "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp", lib.Add})
-		}
+		imports = append(imports, lib.Import{"__atel_otel", "go.opentelemetry.io/otel", lib.Add})
+		imports = append(imports, lib.Import{"__atel_otelhttp", "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp", lib.Add})
 	}
 	return imports
 }

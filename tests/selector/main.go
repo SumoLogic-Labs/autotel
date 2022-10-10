@@ -14,7 +14,9 @@
 
 package main
 
-import "github.com/pdelewski/autotel/rtlib"
+import (
+	"github.com/pdelewski/autotel/rtlib"
+)
 
 type Driver interface {
 	Foo(i int)
@@ -28,6 +30,7 @@ func (impl Impl) Foo(i int) {
 }
 
 func main() {
+
 	rtlib.AutotelEntryPoint__()
 	a := []Driver{
 		Impl{},

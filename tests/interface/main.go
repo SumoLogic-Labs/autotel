@@ -21,6 +21,7 @@ import (
 )
 
 func main() {
+
 	rtlib.AutotelEntryPoint__()
 	bs := BasicSerializer{}
 	var s Serializer

@@ -16,15 +16,15 @@ package app
 
 import (
 	"fmt"
-	"context"
-	otel "go.opentelemetry.io/otel"
+	__atel_context "context"
+	__atel_otel "go.opentelemetry.io/otel"
 )
 
 type BasicSerializer struct {
 }
 
-func (b BasicSerializer) Serialize(__atel_tracing_ctx context.Context,) {
-	__atel_child_tracing_ctx, __atel_span := otel.Tracer("Serialize").Start(__atel_tracing_ctx, "Serialize")
+func (b BasicSerializer) Serialize(__atel_tracing_ctx __atel_context.Context,) {
+	__atel_child_tracing_ctx, __atel_span := __atel_otel.Tracer("Serialize").Start(__atel_tracing_ctx, "Serialize")
 	_ = __atel_child_tracing_ctx
 	defer __atel_span.End()
 

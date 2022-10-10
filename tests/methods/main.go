@@ -14,7 +14,9 @@
 
 package main
 
-import "github.com/pdelewski/autotel/rtlib"
+import (
+	"github.com/pdelewski/autotel/rtlib"
+)
 
 type element struct {
 }
@@ -31,6 +33,7 @@ type impl struct {
 }
 
 func (i impl) foo(p int) int {
+
 	return 5
 }
 
@@ -39,12 +42,15 @@ func foo(p int) int {
 }
 
 func (d driver) process(a int) {
+
 }
 
 func (e element) get(a int) {
+
 }
 
 func main() {
+
 	rtlib.AutotelEntryPoint__()
 	d := driver{}
 	d.process(10)

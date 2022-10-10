@@ -20,13 +20,19 @@ import (
 	"github.com/pdelewski/autotel/rtlib"
 )
 
-func foo() {}
+func foo() {
+
+}
 
 func main() {
+
 	rtlib.AutotelEntryPoint__()
 	messages := make(chan string)
 
-	go func() { messages <- "ping" }()
+	go func() {
+
+		messages <- "ping"
+	}()
 
 	foo()
 

@@ -25,6 +25,7 @@ func Close() error {
 }
 
 func main() {
+
 	rtlib.AutotelEntryPoint__()
 	f, e := os.Create("temp")
 	defer f.Close()

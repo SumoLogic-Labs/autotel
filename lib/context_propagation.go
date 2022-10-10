@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"go/ast"
 
-	"golang.org/x/tools/go/ast/astutil"
 	"golang.org/x/tools/go/packages"
 )
 
@@ -62,7 +61,7 @@ func (pass *ContextPropagationPass) Execute(
 				contextTodo := &ast.CallExpr{
 					Fun: &ast.SelectorExpr{
 						X: &ast.Ident{
-							Name: "context",
+							Name: "__atel_context",
 						},
 						Sel: &ast.Ident{
 							Name: "TODO",
@@ -78,7 +77,7 @@ func (pass *ContextPropagationPass) Execute(
 		contextTodo := &ast.CallExpr{
 			Fun: &ast.SelectorExpr{
 				X: &ast.Ident{
-					Name: "context",
+					Name: "__atel_context",
 				},
 				Sel: &ast.Ident{
 					Name: "TODO",
@@ -161,7 +160,7 @@ func (pass *ContextPropagationPass) Execute(
 			},
 			Type: &ast.SelectorExpr{
 				X: &ast.Ident{
-					Name: "context",
+					Name: "__atel_context",
 				},
 				Sel: &ast.Ident{
 					Name: "Context",
@@ -239,9 +238,7 @@ func (pass *ContextPropagationPass) Execute(
 		return true
 	})
 	if addImports {
-		if !astutil.UsesImport(node, "context") {
-			imports = append(imports, Import{"", "context", Add})
-		}
+		imports = append(imports, Import{"__atel_context", "context", Add})
 	}
 	return imports
 }
