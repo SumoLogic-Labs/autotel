@@ -19,7 +19,7 @@ import (
 	"path/filepath"
 )
 
-func SearchFiles(root string, substring string, ext string) []string {
+func SearchFiles(root string, ext string) []string {
 	var files []string
 	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if filepath.Ext(path) == ext {
@@ -66,19 +66,4 @@ func Contains(a []FuncDescriptor, x FuncDescriptor) bool {
 		}
 	}
 	return false
-}
-
-func Revert(path string) {
-	goExt := ".go"
-	files := SearchFiles(path, "_pass", goExt)
-	for _, file := range files {
-		os.Remove(file)
-	}
-	originalExt := ".original"
-	files = SearchFiles(path, originalExt, goExt)
-	for _, file := range files {
-		newFile := file[:len(file)-(len(goExt)+len(originalExt))]
-		os.Rename(file, newFile+".go")
-	}
-
 }

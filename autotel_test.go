@@ -84,8 +84,8 @@ func Test(t *testing.T) {
 
 	for k, v := range testcases {
 		inject(k, "./...")
-		files := lib.SearchFiles(k, "", ".go")
-		expectedFiles := lib.SearchFiles(v, "", ".go")
+		files := lib.SearchFiles(k, ".go")
+		expectedFiles := lib.SearchFiles(v, ".go")
 		numOfFiles := len(expectedFiles)
 		numOfComparisons := 0
 		for _, file := range files {

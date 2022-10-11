@@ -33,7 +33,6 @@ func usage() {
 	fmt.Println("\t\tdumpcfg                                (dumps control flow graph)")
 	fmt.Println("\t\tgencfg                                 (generates json representation of control flow graph)")
 	fmt.Println("\t\trootfunctions                          (dumps root functions)")
-	fmt.Println("\t\trevert                                 (delete generated files)")
 	fmt.Println("\t\trepl                                   (interactive mode)")
 }
 
@@ -46,7 +45,6 @@ func replUsage() {
 	fmt.Println("\t\tdumpcfg                                (dumps control flow graph)")
 	fmt.Println("\t\tgencfg                                 (generates json representation of control flow graph)")
 	fmt.Println("\t\trootfunctions                          (dumps root functions)")
-	fmt.Println("\t\trevert                                 (delete generated files)")
 	fmt.Println("\t\texit                                   (exit from interactive mode)")
 
 }
@@ -319,10 +317,6 @@ func executeCommand(arglist []string, autotelState *AutotelState) {
 				fmt.Println("\t" + fun.TypeHash())
 			}
 		}
-	}
-	if arglist[1] == "--revert" {
-		projectPath := arglist[2]
-		alib.Revert(projectPath)
 	}
 	if arglist[1] == "--prune" {
 		projectPath := arglist[2]
