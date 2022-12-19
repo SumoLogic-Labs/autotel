@@ -12,20 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package lib
+package lib // import "go.opentelemetry.io/contrib/instrgen/lib"
 
 import (
 	"fmt"
 	"go/ast"
 	"go/printer"
 	"go/token"
-	"log"
 	"os"
 
 	"golang.org/x/tools/go/ast/astutil"
 	"golang.org/x/tools/go/packages"
 )
 
+// Analysis.
 type Analysis struct {
 	ProjectPath    string
 	PackagePattern string
@@ -38,16 +38,20 @@ type Analysis struct {
 type importaction int
 
 const (
+	// import header.
 	Add importaction = iota
+	// remove header.
 	Remove
 )
 
+// Import.
 type Import struct {
 	NamedPackage string
 	Package      string
 	ImportAction importaction
 }
 
+// Analysis.
 type AnalysisPass interface {
 	Execute(node *ast.File,
 		analysis *Analysis,
@@ -55,12 +59,13 @@ type AnalysisPass interface {
 		pkgs []*packages.Package) []Import
 }
 
-func (analysis *Analysis) Execute(pass AnalysisPass, fileSuffix string, leaveOriginal bool) {
+// Execute.
+func (analysis *Analysis) Execute(pass AnalysisPass, fileSuffix string, leaveOriginal bool) error {
 	fset := token.NewFileSet()
 	cfg := &packages.Config{Fset: fset, Mode: LoadMode, Dir: analysis.ProjectPath}
 	pkgs, err := packages.Load(cfg, analysis.PackagePattern)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	for _, pkg := range pkgs {
 		fmt.Println("\t", pkg)
@@ -68,12 +73,15 @@ func (analysis *Analysis) Execute(pass AnalysisPass, fileSuffix string, leaveOri
 		for _, node = range pkg.Syntax {
 			var out *os.File
 			fmt.Println("\t\t", fset.File(node.Pos()).Name())
-
-			out, _ = os.Create(fset.File(node.Pos()).Name() + fileSuffix)
-			defer out.Close()
-
+			out, err = os.Create(fset.File(node.Pos()).Name() + fileSuffix)
+			if err != nil {
+				defer out.Close()
+			}
 			if len(analysis.RootFunctions) == 0 {
-				printer.Fprint(out, fset, node)
+				e := printer.Fprint(out, fset, node)
+				if e != nil {
+					return e
+				}
 				continue
 			}
 			imports := pass.Execute(node, analysis, pkg, pkgs)
@@ -92,12 +100,22 @@ func (analysis *Analysis) Execute(pass AnalysisPass, fileSuffix string, leaveOri
 					}
 				}
 			}
-			printer.Fprint(out, fset, node)
+			e := printer.Fprint(out, fset, node)
+			if e != nil {
+				return e
+			}
 			if leaveOriginal {
-				os.Rename(fset.File(node.Pos()).Name(), fset.File(node.Pos()).Name()+".original")
+				e := os.Rename(fset.File(node.Pos()).Name(), fset.File(node.Pos()).Name()+".original")
+				if e != nil {
+					return e
+				}
 			} else {
-				os.Rename(fset.File(node.Pos()).Name()+fileSuffix, fset.File(node.Pos()).Name())
+				e := os.Rename(fset.File(node.Pos()).Name()+fileSuffix, fset.File(node.Pos()).Name())
+				if e != nil {
+					return e
+				}
 			}
 		}
 	}
+	return nil
 }

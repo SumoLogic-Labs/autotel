@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package lib
+package lib // import "go.opentelemetry.io/contrib/instrgen/lib"
 
 import (
 	"fmt"
@@ -36,9 +36,11 @@ func isFunPartOfCallGraph(fun FuncDescriptor, callgraph map[FuncDescriptor][]Fun
 	return false
 }
 
+// ContextPropagationPass.
 type ContextPropagationPass struct {
 }
 
+// Execute.
 func (pass *ContextPropagationPass) Execute(
 	node *ast.File,
 	analysis *Analysis,
@@ -50,7 +52,6 @@ func (pass *ContextPropagationPass) Execute(
 	// when callexpr is inside var decl
 	// instead of functiondecl
 	currentFun := FuncDescriptor{}
-
 	emitEmptyContext := func(x *ast.CallExpr, fun FuncDescriptor, ctxArg *ast.Ident) {
 		addImports = true
 		if currentFun != (FuncDescriptor{}) {
@@ -87,11 +88,9 @@ func (pass *ContextPropagationPass) Execute(
 			Ellipsis: 0,
 		}
 		x.Args = append([]ast.Expr{contextTodo}, x.Args...)
-
 	}
 	emitCallExpr := func(ident *ast.Ident, n ast.Node, ctxArg *ast.Ident) {
-		switch x := n.(type) {
-		case *ast.CallExpr:
+		if x, ok := n.(*ast.CallExpr); ok {
 			if pkg.TypesInfo.Uses[ident] == nil {
 				return
 			}
@@ -114,12 +113,10 @@ func (pass *ContextPropagationPass) Execute(
 					emitEmptyContext(x, fun, ctxArg)
 				}
 			}
-
 		}
 	}
 	emitCallExprFromSelector := func(sel *ast.SelectorExpr, n ast.Node, ctxArg *ast.Ident) {
-		switch x := n.(type) {
-		case *ast.CallExpr:
+		if x, ok := n.(*ast.CallExpr); ok {
 			if pkg.TypesInfo.Uses[sel.Sel] == nil {
 				return
 			}
@@ -154,7 +151,7 @@ func (pass *ContextPropagationPass) Execute(
 		}
 		ctxField := &ast.Field{
 			Names: []*ast.Ident{
-				&ast.Ident{
+				{
 					Name: "__atel_tracing_ctx",
 				},
 			},
@@ -167,11 +164,9 @@ func (pass *ContextPropagationPass) Execute(
 				},
 			},
 		}
-
 		switch x := n.(type) {
 		case *ast.FuncDecl:
 			pkgPath := ""
-
 			if x.Recv != nil {
 				pkgPath = GetPackagePathHashFromFunc(pkg, pkgs, x, analysis.Interfaces)
 			} else {
@@ -233,7 +228,6 @@ func (pass *ContextPropagationPass) Execute(
 					funcType.Params.List = append([]*ast.Field{ctxField}, funcType.Params.List...)
 				}
 			}
-
 		}
 		return true
 	})

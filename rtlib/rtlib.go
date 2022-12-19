@@ -14,7 +14,7 @@
 
 // Basic runtime library
 
-package rtlib
+package rtlib // import "go.opentelemetry.io/contrib/instrgen/rtlib"
 
 import (
 	"context"
@@ -29,12 +29,14 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 )
 
+// TracingState type.
 type TracingState struct {
 	Logger *log.Logger
 	File   *os.File
 	Tp     *trace.TracerProvider
 }
 
+// NewTracingState.
 func NewTracingState() TracingState {
 	var tracingState TracingState
 	tracingState.Logger = log.New(os.Stdout, "", 0)
@@ -58,7 +60,7 @@ func NewTracingState() TracingState {
 	return tracingState
 }
 
-// newExporter returns a console exporter.
+// NewExporter returns a console exporter.
 func NewExporter(w io.Writer) (trace.SpanExporter, error) {
 	return stdouttrace.New(
 		stdouttrace.WithWriter(w),
@@ -69,7 +71,7 @@ func NewExporter(w io.Writer) (trace.SpanExporter, error) {
 	)
 }
 
-// newResource returns a resource describing this application.
+// NewResource returns a resource describing this application.
 func NewResource() *resource.Resource {
 	r, _ := resource.Merge(
 		resource.Default(),
@@ -83,12 +85,14 @@ func NewResource() *resource.Resource {
 	return r
 }
 
+// Shutdown.
 func Shutdown(ts TracingState) {
 	if err := ts.Tp.Shutdown(context.Background()); err != nil {
 		ts.Logger.Fatal(err)
 	}
 }
 
-func AutotelEntryPoint__() {
+// AutoEntryPoint.
+func AutotelEntryPoint() {
 
 }

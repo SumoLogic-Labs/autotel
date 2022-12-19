@@ -12,13 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package lib
+package lib // import "go.opentelemetry.io/contrib/instrgen/lib"
 
 import (
 	"os"
 	"path/filepath"
 )
 
+// SearchFiles.
 func SearchFiles(root string, ext string) []string {
 	var files []string
 	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
@@ -38,7 +39,6 @@ func isPath(
 	current FuncDescriptor,
 	goal FuncDescriptor,
 	visited map[FuncDescriptor]bool) bool {
-
 	if current == goal {
 		return true
 	}
@@ -59,6 +59,7 @@ func isPath(
 	return false
 }
 
+// Contains.
 func Contains(a []FuncDescriptor, x FuncDescriptor) bool {
 	for _, n := range a {
 		if x.TypeHash() == n.TypeHash() {

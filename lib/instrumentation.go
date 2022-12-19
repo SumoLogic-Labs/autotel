@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package lib
+package lib // import "go.opentelemetry.io/contrib/instrgen/lib"
 
 import (
 	"fmt"
@@ -22,9 +22,11 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
+// InstrumentationPass.
 type InstrumentationPass struct {
 }
 
+// Execute.
 func (pass *InstrumentationPass) Execute(
 	node *ast.File,
 	analysis *Analysis,
@@ -53,7 +55,6 @@ func (pass *InstrumentationPass) Execute(
 	// more than once
 	var functionLiteralPositions []token.Pos
 	ast.Inspect(node, func(n ast.Node) bool {
-
 		switch x := n.(type) {
 		case *ast.FuncDecl:
 			pkgPath := ""

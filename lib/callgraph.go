@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package lib
+package lib // import "go.opentelemetry.io/contrib/instrgen/lib"
 
 import (
 	"fmt"
@@ -27,22 +27,26 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
+// FuncDescriptor.
 type FuncDescriptor struct {
 	Id              string
 	DeclType        string
 	CustomInjection bool
 }
 
+// TypeHash.
 func (fd FuncDescriptor) TypeHash() string {
 	return fd.Id + fd.DeclType
 }
 
+// LoadMode.
 const LoadMode packages.LoadMode = packages.NeedName |
 	packages.NeedTypes |
 	packages.NeedSyntax |
 	packages.NeedTypesInfo |
 	packages.NeedFiles
 
+// FindRootFunctions.
 func FindRootFunctions(projectPath string, packagePattern string) []FuncDescriptor {
 	fset := token.NewFileSet()
 
@@ -53,7 +57,7 @@ func FindRootFunctions(projectPath string, packagePattern string) []FuncDescript
 	cfg := &packages.Config{Fset: fset, Mode: LoadMode, Dir: projectPath}
 	pkgs, err := packages.Load(cfg, packagePattern)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 	for _, pkg := range pkgs {
 		fmt.Println("\t", pkg)
@@ -83,6 +87,7 @@ func FindRootFunctions(projectPath string, packagePattern string) []FuncDescript
 	return rootFunctions
 }
 
+// GetMostInnerAstIdent.
 func GetMostInnerAstIdent(inSel *ast.SelectorExpr) *ast.Ident {
 	var l []*ast.Ident
 	var e ast.Expr
@@ -132,6 +137,7 @@ func GetMostInnerAstIdent(inSel *ast.SelectorExpr) *ast.Ident {
 	return l[1]
 }
 
+// GetPackagePathHashFromFunc.
 func GetPackagePathHashFromFunc(pkg *packages.Package,
 	pkgs []*packages.Package, x *ast.FuncDecl, interfaces map[string]bool) string {
 	pkgPath := ""
@@ -179,6 +185,7 @@ func GetPackagePathHashFromFunc(pkg *packages.Package,
 	return pkgPath
 }
 
+// GetSelectorPkgPath.
 func GetSelectorPkgPath(sel *ast.SelectorExpr, pkg *packages.Package, pkgPath string) string {
 	caller := GetMostInnerAstIdent(sel)
 	if caller != nil {
@@ -201,6 +208,7 @@ func GetSelectorPkgPath(sel *ast.SelectorExpr, pkg *packages.Package, pkgPath st
 	return pkgPath
 }
 
+// GetPkgNameFromUsesTable.
 func GetPkgNameFromUsesTable(pkg *packages.Package, ident *ast.Ident) string {
 	if pkg.TypesInfo.Uses[ident].Pkg() != nil {
 		return pkg.TypesInfo.Uses[ident].Pkg().Path()
@@ -208,6 +216,7 @@ func GetPkgNameFromUsesTable(pkg *packages.Package, ident *ast.Ident) string {
 	return ""
 }
 
+// GetPkgNameFromDefsTable.
 func GetPkgNameFromDefsTable(pkg *packages.Package, ident *ast.Ident) string {
 	if pkg.TypesInfo.Defs[ident] == nil {
 		return ""
@@ -218,23 +227,22 @@ func GetPkgNameFromDefsTable(pkg *packages.Package, ident *ast.Ident) string {
 	return ""
 }
 
+// BuildCallGraph.
 func BuildCallGraph(
 	projectPath string,
 	packagePattern string,
 	funcDecls map[FuncDescriptor]bool,
 	interfaces map[string]bool) map[FuncDescriptor][]FuncDescriptor {
-
 	fset := token.NewFileSet()
 	cfg := &packages.Config{Fset: fset, Mode: LoadMode, Dir: projectPath}
 	pkgs, err := packages.Load(cfg, packagePattern)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 	fmt.Println("BuildCallGraph")
 	currentFun := FuncDescriptor{"nil", "", false}
 	backwardCallGraph := make(map[FuncDescriptor][]FuncDescriptor)
 	for _, pkg := range pkgs {
-
 		fmt.Println("\t", pkg)
 		for _, node := range pkg.Syntax {
 			fmt.Println("\t\t", fset.File(node.Pos()).Name())
@@ -249,7 +257,7 @@ func BuildCallGraph(
 							fset.File(node.Pos()).Name())
 						fun := FuncDescriptor{funId, pkg.TypesInfo.Uses[id].Type().String(), false}
 						if !Contains(backwardCallGraph[fun], currentFun) {
-							if funcDecls[fun] == true {
+							if funcDecls[fun] {
 								backwardCallGraph[fun] = append(backwardCallGraph[fun], currentFun)
 							}
 						}
@@ -266,7 +274,7 @@ func BuildCallGraph(
 								fset.File(node.Pos()).Name())
 							fun := FuncDescriptor{funId, pkg.TypesInfo.Uses[sel.Sel].Type().String(), false}
 							if !Contains(backwardCallGraph[fun], currentFun) {
-								if funcDecls[fun] == true {
+								if funcDecls[fun] {
 									backwardCallGraph[fun] = append(backwardCallGraph[fun], currentFun)
 								}
 							}
@@ -275,10 +283,8 @@ func BuildCallGraph(
 				case *ast.FuncDecl:
 					pkgPath := ""
 					if x.Recv != nil {
-
 						pkgPath = GetPackagePathHashFromFunc(pkg, pkgs, x, interfaces)
 					} else {
-
 						pkgPath = GetPkgNameFromDefsTable(pkg, x.Name)
 					}
 					if pkg.TypesInfo.Defs[x.Name] != nil {
@@ -295,12 +301,13 @@ func BuildCallGraph(
 	return backwardCallGraph
 }
 
+// FindFuncDecls.
 func FindFuncDecls(projectPath string, packagePattern string, interfaces map[string]bool) map[FuncDescriptor]bool {
 	fset := token.NewFileSet()
 	cfg := &packages.Config{Fset: fset, Mode: LoadMode, Dir: projectPath}
 	pkgs, err := packages.Load(cfg, packagePattern)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 	fmt.Println("FindFuncDecls")
 	funcDecls := make(map[FuncDescriptor]bool)
@@ -309,8 +316,7 @@ func FindFuncDecls(projectPath string, packagePattern string, interfaces map[str
 		for _, node := range pkg.Syntax {
 			fmt.Println("\t\t", fset.File(node.Pos()).Name())
 			ast.Inspect(node, func(n ast.Node) bool {
-				switch x := n.(type) {
-				case *ast.FuncDecl:
+				if x, ok := n.(*ast.FuncDecl); ok {
 					pkgPath := ""
 					if x.Recv != nil {
 						pkgPath = GetPackagePathHashFromFunc(pkg, pkgs, x, interfaces)
@@ -322,7 +328,6 @@ func FindFuncDecls(projectPath string, packagePattern string, interfaces map[str
 						fmt.Println("\t\t\tFuncDecl:", funId, pkg.TypesInfo.Defs[x.Name].Type().String())
 						funcDecls[FuncDescriptor{funId, pkg.TypesInfo.Defs[x.Name].Type().String(), false}] = true
 					}
-
 				}
 				return true
 			})
@@ -331,12 +336,13 @@ func FindFuncDecls(projectPath string, packagePattern string, interfaces map[str
 	return funcDecls
 }
 
+// FindInterfaces.
 func FindInterfaces(projectPath string, packagePattern string) map[string]bool {
 	fset := token.NewFileSet()
 	cfg := &packages.Config{Fset: fset, Mode: LoadMode, Dir: projectPath}
 	pkgs, err := packages.Load(cfg, packagePattern)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 	fmt.Println("FindInterfaces")
 	interaceTable := make(map[string]bool)
@@ -345,8 +351,7 @@ func FindInterfaces(projectPath string, packagePattern string) map[string]bool {
 		for _, node := range pkg.Syntax {
 			fmt.Println("\t\t", fset.File(node.Pos()).Name())
 			ast.Inspect(node, func(n ast.Node) bool {
-				switch x := n.(type) {
-				case *ast.TypeSpec:
+				if x, ok := n.(*ast.TypeSpec); ok {
 					if _, ok := x.Type.(*ast.InterfaceType); ok {
 						fmt.Println("\t\t\tInterface:", pkg.TypesInfo.Defs[x.Name].Type().String())
 						interaceTable[pkg.TypesInfo.Defs[x.Name].Type().String()] = true
@@ -359,6 +364,7 @@ func FindInterfaces(projectPath string, packagePattern string) map[string]bool {
 	return interaceTable
 }
 
+// InferRootFunctionsFromGraph.
 func InferRootFunctionsFromGraph(callgraph map[FuncDescriptor][]FuncDescriptor) []FuncDescriptor {
 	var allFunctions map[FuncDescriptor]bool
 	var rootFunctions []FuncDescriptor
@@ -369,7 +375,7 @@ func InferRootFunctionsFromGraph(callgraph map[FuncDescriptor][]FuncDescriptor) 
 			allFunctions[childFun] = true
 		}
 	}
-	for k, _ := range allFunctions {
+	for k := range allFunctions {
 		_, exists := callgraph[k]
 		if !exists {
 			rootFunctions = append(rootFunctions, k)
@@ -388,14 +394,15 @@ func InferRootFunctionsFromGraph(callgraph map[FuncDescriptor][]FuncDescriptor) 
 //     ]
 // };
 
+// Generatecfg.
 func Generatecfg(callgraph map[FuncDescriptor][]FuncDescriptor, path string) {
 	functions := make(map[FuncDescriptor]bool, 0)
 	for k, childFuns := range callgraph {
-		if functions[k] == false {
+		if !functions[k] {
 			functions[k] = true
 		}
 		for _, v := range childFuns {
-			if functions[v] == false {
+			if !functions[v] {
 				functions[v] = true
 			}
 		}
@@ -408,33 +415,88 @@ func Generatecfg(callgraph map[FuncDescriptor][]FuncDescriptor, path string) {
 	if err != nil {
 		return
 	}
-	out.WriteString("var callgraph = {")
-	out.WriteString("\n\tnodes: [")
-	for f := range functions {
-		out.WriteString("\n\t\t { data: { id: '")
-		out.WriteString(f.TypeHash())
-		out.WriteString("' } },")
+	_, err = out.WriteString("var callgraph = {")
+	if err != nil {
+		return
 	}
-	out.WriteString("\n\t],")
-	out.WriteString("\n\tedges: [")
+	_, err = out.WriteString("\n\tnodes: [")
+	if err != nil {
+		return
+	}
+	for f := range functions {
+		_, err = out.WriteString("\n\t\t { data: { id: '")
+		if err != nil {
+			return
+		}
+		_, err = out.WriteString(f.TypeHash())
+		if err != nil {
+			return
+		}
+		_, err = out.WriteString("' } },")
+		if err != nil {
+			return
+		}
+	}
+	_, err = out.WriteString("\n\t],")
+	if err != nil {
+		return
+	}
+	_, err = out.WriteString("\n\tedges: [")
+	if err != nil {
+		return
+	}
 	edgeCounter := 0
 	for k, children := range callgraph {
 		for _, childFun := range children {
-			out.WriteString("\n\t\t { data: { id: '")
-			out.WriteString("e" + strconv.Itoa(edgeCounter))
-			out.WriteString("', ")
-			out.WriteString("source: '")
-
-			out.WriteString(childFun.TypeHash())
-
-			out.WriteString("', ")
-			out.WriteString("target: '")
-			out.WriteString(k.TypeHash())
-			out.WriteString("' ")
-			out.WriteString("} },")
+			_, err = out.WriteString("\n\t\t { data: { id: '")
+			if err != nil {
+				return
+			}
+			_, err = out.WriteString("e" + strconv.Itoa(edgeCounter))
+			if err != nil {
+				return
+			}
+			_, err = out.WriteString("', ")
+			if err != nil {
+				return
+			}
+			_, err = out.WriteString("source: '")
+			if err != nil {
+				return
+			}
+			_, err = out.WriteString(childFun.TypeHash())
+			if err != nil {
+				return
+			}
+			_, err = out.WriteString("', ")
+			if err != nil {
+				return
+			}
+			_, err = out.WriteString("target: '")
+			if err != nil {
+				return
+			}
+			_, err = out.WriteString(k.TypeHash())
+			if err != nil {
+				return
+			}
+			_, err = out.WriteString("' ")
+			if err != nil {
+				return
+			}
+			_, err = out.WriteString("} },")
+			if err != nil {
+				return
+			}
 			edgeCounter++
 		}
 	}
-	out.WriteString("\n\t]")
-	out.WriteString("\n};")
+	_, err = out.WriteString("\n\t]")
+	if err != nil {
+		return
+	}
+	_, err = out.WriteString("\n};")
+	if err != nil {
+		return
+	}
 }
