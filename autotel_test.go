@@ -57,7 +57,7 @@ func inject(root string, packagePattern string) {
 		fmt.Print(" ", v)
 	}
 	fmt.Println("")
-	analysis := &alib.Analysis{root, packagePattern, rootFunctions, funcDecls, backwardCallGraph, interfaces}
+	analysis := &alib.Analysis{root, packagePattern, rootFunctions, funcDecls, backwardCallGraph, interfaces, false}
 	ExecutePasses(analysis)
 }
 
@@ -75,8 +75,8 @@ func executePruning(root string, packagePattern string) {
 		fmt.Print(" ", v)
 	}
 	fmt.Println("")
-	analysis := &alib.Analysis{root, packagePattern, rootFunctions, funcDecls, backwardCallGraph, interfaces}
-	analysis.Execute(&lib.OtelPruner{}, otelPrunerPassSuffix, true)
+	analysis := &alib.Analysis{root, packagePattern, rootFunctions, funcDecls, backwardCallGraph, interfaces, true}
+	analysis.Execute(&lib.OtelPruner{}, otelPrunerPassSuffix)
 
 }
 

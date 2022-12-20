@@ -33,6 +33,7 @@ type Analysis struct {
 	FuncDecls      map[FuncDescriptor]bool
 	Callgraph      map[FuncDescriptor][]FuncDescriptor
 	Interfaces     map[string]bool
+	Debug          bool
 }
 
 type importaction int
@@ -59,8 +60,17 @@ type AnalysisPass interface {
 		pkgs []*packages.Package) []Import
 }
 
+func createFile(name string) (*os.File, error) {
+	var out *os.File
+	out, err := os.Create(name)
+	if err != nil {
+		defer out.Close()
+	}
+	return out, err
+}
+
 // Execute.
-func (analysis *Analysis) Execute(pass AnalysisPass, fileSuffix string, leaveOriginal bool) error {
+func (analysis *Analysis) Execute(pass AnalysisPass, fileSuffix string) error {
 	fset := token.NewFileSet()
 	cfg := &packages.Config{Fset: fset, Mode: LoadMode, Dir: analysis.ProjectPath}
 	pkgs, err := packages.Load(cfg, analysis.PackagePattern)
@@ -71,11 +81,11 @@ func (analysis *Analysis) Execute(pass AnalysisPass, fileSuffix string, leaveOri
 		fmt.Println("\t", pkg)
 		var node *ast.File
 		for _, node = range pkg.Syntax {
-			var out *os.File
 			fmt.Println("\t\t", fset.File(node.Pos()).Name())
-			out, err = os.Create(fset.File(node.Pos()).Name() + fileSuffix)
+			var out *os.File
+			out, err = createFile(fset.File(node.Pos()).Name() + fileSuffix)
 			if err != nil {
-				defer out.Close()
+				return err
 			}
 			if len(analysis.RootFunctions) == 0 {
 				e := printer.Fprint(out, fset, node)
@@ -104,16 +114,18 @@ func (analysis *Analysis) Execute(pass AnalysisPass, fileSuffix string, leaveOri
 			if e != nil {
 				return e
 			}
-			if leaveOriginal {
-				e := os.Rename(fset.File(node.Pos()).Name(), fset.File(node.Pos()).Name()+".original")
-				if e != nil {
-					return e
-				}
+			var oldFileName string
+			var newFileName string
+			if analysis.Debug {
+				oldFileName = fset.File(node.Pos()).Name()
+				newFileName = fset.File(node.Pos()).Name() + ".original"
 			} else {
-				e := os.Rename(fset.File(node.Pos()).Name()+fileSuffix, fset.File(node.Pos()).Name())
-				if e != nil {
-					return e
-				}
+				oldFileName = fset.File(node.Pos()).Name() + fileSuffix
+				newFileName = fset.File(node.Pos()).Name()
+			}
+			e = os.Rename(oldFileName, newFileName)
+			if e != nil {
+				return e
 			}
 		}
 	}

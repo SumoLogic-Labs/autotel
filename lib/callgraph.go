@@ -411,7 +411,9 @@ func Generatecfg(callgraph map[FuncDescriptor][]FuncDescriptor, path string) {
 		fmt.Println(f)
 	}
 	out, err := os.Create(path)
-	defer out.Close()
+	if err != nil {
+		defer out.Close()
+	}
 	if err != nil {
 		return
 	}

@@ -30,22 +30,22 @@ const (
 
 func ExecutePassesDumpIr(analysis *lib.Analysis) {
 	fmt.Println("Http Instrumentation")
-	analysis.Execute(&http.HttpRewriter{}, httpPassFileSuffix, true)
+	analysis.Execute(&http.HttpRewriter{}, httpPassFileSuffix)
 
 	fmt.Println("Instrumentation")
-	analysis.Execute(&lib.InstrumentationPass{}, instrumentationPassFileSuffix, true)
+	analysis.Execute(&lib.InstrumentationPass{}, instrumentationPassFileSuffix)
 
 	fmt.Println("ContextPropagation")
-	analysis.Execute(&lib.ContextPropagationPass{}, contextPassFileSuffix, true)
+	analysis.Execute(&lib.ContextPropagationPass{}, contextPassFileSuffix)
 }
 
 func ExecutePasses(analysis *lib.Analysis) {
 	fmt.Println("Http Instrumentation")
-	analysis.Execute(&http.HttpRewriter{}, httpPassFileSuffix, false)
+	analysis.Execute(&http.HttpRewriter{}, httpPassFileSuffix)
 
 	fmt.Println("Instrumentation")
-	analysis.Execute(&lib.InstrumentationPass{}, instrumentationPassFileSuffix, false)
+	analysis.Execute(&lib.InstrumentationPass{}, instrumentationPassFileSuffix)
 
 	fmt.Println("ContextPropagation")
-	analysis.Execute(&lib.ContextPropagationPass{}, contextPassFileSuffix, false)
+	analysis.Execute(&lib.ContextPropagationPass{}, contextPassFileSuffix)
 }

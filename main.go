@@ -80,8 +80,9 @@ func Prune(projectPath string, packagePattern string) {
 		RootFunctions:  rootFunctions,
 		FuncDecls:      funcDecls,
 		Callgraph:      backwardCallGraph,
-		Interfaces:     interfaces}
-	analysis.Execute(&alib.OtelPruner{}, otelPrunerPassSuffix, false)
+		Interfaces:     interfaces,
+		Debug:          false}
+	analysis.Execute(&alib.OtelPruner{}, otelPrunerPassSuffix)
 	fmt.Println("\tpruning done")
 }
 
@@ -114,7 +115,8 @@ func executeCommand(arglist []string, autotelState *AutotelState) {
 				RootFunctions:  rootFunctions,
 				FuncDecls:      funcDecls,
 				Callgraph:      backwardCallGraph,
-				Interfaces:     interfaces}
+				Interfaces:     interfaces,
+				Debug:          false}
 			ExecutePasses(analysis)
 			fmt.Println("\tinstrumentation done")
 		} else {
@@ -141,7 +143,8 @@ func executeCommand(arglist []string, autotelState *AutotelState) {
 				RootFunctions:  rootFunctions,
 				FuncDecls:      funcDecls,
 				Callgraph:      backwardCallGraph,
-				Interfaces:     interfaces}
+				Interfaces:     interfaces,
+				Debug:          false}
 			ExecutePasses(analysis)
 			fmt.Println("\tinstrumentation done")
 		}
@@ -169,7 +172,8 @@ func executeCommand(arglist []string, autotelState *AutotelState) {
 				RootFunctions:  rootFunctions,
 				FuncDecls:      funcDecls,
 				Callgraph:      backwardCallGraph,
-				Interfaces:     interfaces}
+				Interfaces:     interfaces,
+				Debug:          true}
 			ExecutePassesDumpIr(analysis)
 			fmt.Println("\tinstrumentation done")
 		} else {
@@ -196,7 +200,8 @@ func executeCommand(arglist []string, autotelState *AutotelState) {
 				RootFunctions:  rootFunctions,
 				FuncDecls:      funcDecls,
 				Callgraph:      backwardCallGraph,
-				Interfaces:     interfaces}
+				Interfaces:     interfaces,
+				Debug:          true}
 			ExecutePassesDumpIr(analysis)
 			fmt.Println("\tinstrumentation done")
 
@@ -239,7 +244,8 @@ func executeCommand(arglist []string, autotelState *AutotelState) {
 			RootFunctions:  rootFunctions,
 			FuncDecls:      funcDecls,
 			Callgraph:      backwardCallGraph,
-			Interfaces:     interfaces}
+			Interfaces:     interfaces,
+			Debug:          false}
 		ExecutePasses(analysis)
 	}
 	if arglist[1] == "--dumpcfg" {
