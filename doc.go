@@ -12,33 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package lib // import "go.opentelemetry.io/contrib/instrgen/lib"
-
-import (
-	"os"
-	"path/filepath"
-)
-
-// SearchFiles.
-func SearchFiles(root string, ext string) []string {
-	var files []string
-	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
-		if filepath.Ext(path) == ext {
-			files = append(files, path)
-		}
-		return nil
-	})
-	if err != nil {
-		panic(err)
-	}
-	return files
-}
-
-// FileExists.
-func FileExists(filename string) bool {
-	info, err := os.Stat(filename)
-	if os.IsNotExist(err) {
-		return false
-	}
-	return !info.IsDir()
-}
+/*
+Package instrgen provides a code generation utility that instruments existing
+source code with OpenTelemetry.
+*/
+package instrgen // import "go.opentelemetry.io/contrib/instrgen"

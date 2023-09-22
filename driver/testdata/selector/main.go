@@ -12,33 +12,32 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package lib // import "go.opentelemetry.io/contrib/instrgen/lib"
+//nolint:all // Linter is executed at the same time as tests which leads to race conditions and failures.
+package main
 
 import (
-	"os"
-	"path/filepath"
+	"go.opentelemetry.io/contrib/instrgen/rtlib"
 )
 
-// SearchFiles.
-func SearchFiles(root string, ext string) []string {
-	var files []string
-	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
-		if filepath.Ext(path) == ext {
-			files = append(files, path)
-		}
-		return nil
-	})
-	if err != nil {
-		panic(err)
-	}
-	return files
+type Driver interface {
+	Foo(i int)
 }
 
-// FileExists.
-func FileExists(filename string) bool {
-	info, err := os.Stat(filename)
-	if os.IsNotExist(err) {
-		return false
+type Impl struct {
+}
+
+func (impl Impl) Foo(i int) {
+
+}
+
+func main() {
+
+	rtlib.AutotelEntryPoint()
+	a := []Driver{
+		Impl{},
 	}
-	return !info.IsDir()
+	var d Driver
+	d = Impl{}
+	d.Foo(3)
+	a[0].Foo(4)
 }

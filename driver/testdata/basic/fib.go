@@ -12,33 +12,43 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package lib // import "go.opentelemetry.io/contrib/instrgen/lib"
+//nolint:all // Linter is executed at the same time as tests which leads to race conditions and failures.
+package main
 
 import (
-	"os"
-	"path/filepath"
+	"fmt"
+	_ "go.opentelemetry.io/otel"
+	_ "context"
 )
 
-// SearchFiles.
-func SearchFiles(root string, ext string) []string {
-	var files []string
-	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
-		if filepath.Ext(path) == ext {
-			files = append(files, path)
-		}
-		return nil
-	})
-	if err != nil {
-		panic(err)
-	}
-	return files
+func foo() {
+
+	fmt.Println("foo")
 }
 
-// FileExists.
-func FileExists(filename string) bool {
-	info, err := os.Stat(filename)
-	if os.IsNotExist(err) {
-		return false
+func FibonacciHelper(n uint) (uint64, error) {
+
+	func() {
+
+		foo()
+	}()
+	return Fibonacci(n)
+}
+
+func Fibonacci(n uint) (uint64, error) {
+
+	if n <= 1 {
+		return uint64(n), nil
 	}
-	return !info.IsDir()
+
+	if n > 93 {
+		return 0, fmt.Errorf("unsupported fibonacci number %d: too large", n)
+	}
+
+	var n2, n1 uint64 = 0, 1
+	for i := uint(2); i < n; i++ {
+		n2, n1 = n1, n1+n2
+	}
+
+	return n2 + n1, nil
 }

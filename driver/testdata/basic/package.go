@@ -12,33 +12,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package lib // import "go.opentelemetry.io/contrib/instrgen/lib"
+//nolint:all // Linter is executed at the same time as tests which leads to race conditions and failures.
+package main
 
 import (
 	"os"
-	"path/filepath"
+	_ "go.opentelemetry.io/otel"
+	_ "context"
 )
 
-// SearchFiles.
-func SearchFiles(root string, ext string) []string {
-	var files []string
-	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
-		if filepath.Ext(path) == ext {
-			files = append(files, path)
-		}
-		return nil
-	})
-	if err != nil {
-		panic(err)
-	}
-	return files
+func Close() error {
+
+	return nil
 }
 
-// FileExists.
-func FileExists(filename string) bool {
-	info, err := os.Stat(filename)
-	if os.IsNotExist(err) {
-		return false
+func pack() {
+
+	f, e := os.Create("temp")
+	defer f.Close()
+	if e != nil {
+
 	}
-	return !info.IsDir()
 }
