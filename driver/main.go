@@ -322,7 +322,7 @@ func InjectTracingCtx(call *ast.CallExpr, fset *token.FileSet, file *ast.File) {
 			Name: "Str",
 		},
 	}
-	newCallExpr := &ast.CallExpr{
+	traceIdCallExpr := &ast.CallExpr{
 		Fun:    selExpr,
 		Lparen: 40,
 		Args: []ast.Expr{
@@ -353,8 +353,45 @@ func InjectTracingCtx(call *ast.CallExpr, fset *token.FileSet, file *ast.File) {
 		},
 		Ellipsis: 0,
 	}
-	_ = newCallExpr
-	stack[len(stack)-2].Fun.(*ast.SelectorExpr).X = newCallExpr
+	selExpr2 := &ast.SelectorExpr{
+		X: traceIdCallExpr,
+		Sel: &ast.Ident{
+			Name: "Str",
+		},
+	}
+	spanIdCallExpr := &ast.CallExpr{
+		Fun:    selExpr2,
+		Lparen: 40,
+		Args: []ast.Expr{
+			&ast.Ident{
+				Name: "\"spand_id\"",
+			},
+			&ast.CallExpr{
+				Fun: &ast.SelectorExpr{
+					X: &ast.CallExpr{
+						Fun: &ast.SelectorExpr{
+							X: &ast.Ident{
+								Name: "__atel_spanCtx",
+							},
+							Sel: &ast.Ident{
+								Name: "SpanID",
+							},
+						},
+						Lparen:   82,
+						Ellipsis: 0,
+					},
+					Sel: &ast.Ident{
+						Name: "String",
+					},
+				},
+				Lparen:   91,
+				Ellipsis: 0,
+			},
+		},
+		Ellipsis: 0,
+	}
+
+	stack[len(stack)-2].Fun.(*ast.SelectorExpr).X = spanIdCallExpr
 	for len(stack) > 0 {
 		n := len(stack) - 1 // Top element
 		if sel, ok := stack[n].Fun.(*ast.SelectorExpr); ok {
@@ -367,9 +404,6 @@ func InjectTracingCtx(call *ast.CallExpr, fset *token.FileSet, file *ast.File) {
 
 		stack = stack[:n] // Pop
 	}
-	//var buf bytes.Buffer
-	//printer.Fprint(&buf, fset, file)
-	//fmt.Println(buf.String())
 	var out *os.File
 	out, err := createFile(fset.File(file.Pos()).Name() + "tmp")
 	if err != nil {
