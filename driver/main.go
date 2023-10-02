@@ -18,13 +18,18 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"go/ast"
+	"go/build"
 	"go/parser"
 	"go/printer"
 	"go/token"
+	"go/types"
+	"golang.org/x/tools/go/loader"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	alib "go.opentelemetry.io/contrib/instrgen/lib"
 	"go.opentelemetry.io/contrib/instrgen/rewriters"
@@ -85,6 +90,37 @@ func isDirectory(path string) (bool, error) {
 	return fileInfo.IsDir(), err
 }
 
+func LoadProgram(projectPath string, ginfo *types.Info) (*loader.Program, error) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return nil, err
+	}
+	conf := loader.Config{ParserMode: parser.ParseComments}
+	conf.Build = &build.Default
+	conf.Build.CgoEnabled = false
+	conf.Build.Dir = filepath.Join(cwd, projectPath)
+	conf.Import(projectPath)
+	var mutex = &sync.RWMutex{}
+	conf.AfterTypeCheck = func(info *loader.PackageInfo, files []*ast.File) {
+		for k, v := range info.Defs {
+			mutex.Lock()
+			ginfo.Defs[k] = v
+			mutex.Unlock()
+		}
+		for k, v := range info.Uses {
+			mutex.Lock()
+			ginfo.Uses[k] = v
+			mutex.Unlock()
+		}
+		for k, v := range info.Selections {
+			mutex.Lock()
+			ginfo.Selections[k] = v
+			mutex.Unlock()
+		}
+	}
+	return conf.Load()
+}
+
 func executeCommand(command string, projectPath string, packagePattern string, replaceSource string, entryPoint string, executor CommandExecutor) error {
 	isDir, err := isDirectory(projectPath)
 	if !isDir {
@@ -96,6 +132,7 @@ func executeCommand(command string, projectPath string, packagePattern string, r
 	if command == "--prune" {
 		replaceSource = "yes"
 	}
+
 	switch command {
 	case "--inject", "--prune":
 		entry := strings.Split(entryPoint, ".")
@@ -258,6 +295,99 @@ func toolExecMain(args []string, rewriterS []alib.PackageRewriter, executor Comm
 	return nil
 }
 
+func InjectTracingCtx(call *ast.CallExpr, fset *token.FileSet, file *ast.File) {
+	var stack []*ast.CallExpr
+	stack = append(stack, call)
+	for {
+		n := len(stack) - 1 // Top element
+		if sel, ok := stack[n].Fun.(*ast.SelectorExpr); ok {
+			if callE, ok := sel.X.(*ast.CallExpr); ok {
+				stack = append(stack, callE)
+			} else {
+				break
+			}
+		} else {
+			break
+		}
+	}
+	if last, ok := stack[0].Fun.(*ast.SelectorExpr); ok {
+		if last.Sel.Name != "Msg" {
+			return
+		}
+	}
+
+	selExpr := &ast.SelectorExpr{
+		X: stack[len(stack)-1],
+		Sel: &ast.Ident{
+			Name: "Str",
+		},
+	}
+	newCallExpr := &ast.CallExpr{
+		Fun:    selExpr,
+		Lparen: 40,
+		Args: []ast.Expr{
+			&ast.Ident{
+				Name: "\"trace_id\"",
+			},
+			&ast.CallExpr{
+				Fun: &ast.SelectorExpr{
+					X: &ast.CallExpr{
+						Fun: &ast.SelectorExpr{
+							X: &ast.Ident{
+								Name: "__atel_spanCtx",
+							},
+							Sel: &ast.Ident{
+								Name: "TraceID",
+							},
+						},
+						Lparen:   82,
+						Ellipsis: 0,
+					},
+					Sel: &ast.Ident{
+						Name: "String",
+					},
+				},
+				Lparen:   91,
+				Ellipsis: 0,
+			},
+		},
+		Ellipsis: 0,
+	}
+	_ = newCallExpr
+	stack[len(stack)-2].Fun.(*ast.SelectorExpr).X = newCallExpr
+	for len(stack) > 0 {
+		n := len(stack) - 1 // Top element
+		if sel, ok := stack[n].Fun.(*ast.SelectorExpr); ok {
+			if ident, ok := sel.X.(*ast.Ident); ok {
+				fmt.Print(ident.Name)
+			}
+			fmt.Print(".")
+			fmt.Print(sel.Sel.Name)
+		}
+
+		stack = stack[:n] // Pop
+	}
+	//var buf bytes.Buffer
+	//printer.Fprint(&buf, fset, file)
+	//fmt.Println(buf.String())
+	var out *os.File
+	out, err := createFile(fset.File(file.Pos()).Name() + "tmp")
+	if err != nil {
+		return
+	}
+	err = printer.Fprint(out, fset, file)
+	if err != nil {
+		return
+	}
+	oldFileName := fset.File(file.Pos()).Name() + "tmp"
+	newFileName := fset.File(file.Pos()).Name()
+	err = os.Rename(oldFileName, newFileName)
+	if err != nil {
+		return
+	}
+	fmt.Println()
+}
+
 func makeRewriters(instrgenCfg InstrgenCmd) []alib.PackageRewriter {
 	var rewriterS []alib.PackageRewriter
 	switch instrgenCfg.Cmd {
@@ -274,9 +404,60 @@ func makeRewriters(instrgenCfg InstrgenCmd) []alib.PackageRewriter {
 	return rewriterS
 }
 
+func sema() error {
+
+	f, err := os.Create("sema")
+	ginfo := &types.Info{
+		Defs:       make(map[*ast.Ident]types.Object),
+		Uses:       make(map[*ast.Ident]types.Object),
+		Selections: make(map[*ast.SelectorExpr]*types.Selection),
+	}
+
+	prog, err := LoadProgram(".", ginfo)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+
+	for _, pkg := range prog.AllPackages {
+		for _, file := range pkg.Files {
+			f.WriteString(prog.Fset.File(file.Pos()).Name())
+			f.WriteString("\n")
+			ast.Inspect(file, func(n ast.Node) bool {
+				switch node := n.(type) {
+				case *ast.CallExpr:
+					_ = node
+					f.WriteString("CallExpr")
+					f.WriteString("\n")
+					if selExpr, ok := node.Fun.(*ast.SelectorExpr); ok {
+						obj := ginfo.Uses[selExpr.Sel]
+						var pkg string
+						if obj != nil && obj.Pkg() != nil {
+							pkg = obj.Pkg().Path()
+						}
+
+						f.WriteString("\n")
+						if strings.Contains(pkg, "zerolog") == true && strings.Contains(prog.Fset.File(file.Pos()).Name(), "main.go") {
+							InjectTracingCtx(node, prog.Fset, file)
+						}
+						//start := prog.Fset.Position(n.Pos())
+						//end := prog.Fset.Position(n.End())
+					}
+				}
+				return true
+			})
+		}
+	}
+	return nil
+}
+
 func driverMain(args []string, executor CommandExecutor) error {
 	cmdName := GetCommandName(args)
 	if cmdName != "compile" {
+		// do semantic check before injecting
+		if cmdName == "--inject" {
+			sema()
+		}
 		switch cmdName {
 		case "--inject", "--prune":
 			fmt.Println("instrgen compiler")
