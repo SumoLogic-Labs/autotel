@@ -438,7 +438,7 @@ func makeRewriters(instrgenCfg InstrgenCmd) []alib.PackageRewriter {
 	return rewriterS
 }
 
-func sema() error {
+func sema(projectPath string) error {
 
 	f, err := os.Create("sema")
 	ginfo := &types.Info{
@@ -471,7 +471,7 @@ func sema() error {
 						}
 
 						f.WriteString("\n")
-						if strings.Contains(pkg, "zerolog") == true && strings.Contains(prog.Fset.File(file.Pos()).Name(), "main.go") {
+						if strings.Contains(pkg, "zerolog") == true && strings.Contains(prog.Fset.File(file.Pos()).Name(), projectPath) {
 							InjectTracingCtx(node, prog.Fset, file)
 						}
 						//start := prog.Fset.Position(n.Pos())
@@ -490,7 +490,7 @@ func driverMain(args []string, executor CommandExecutor) error {
 	if cmdName != "compile" {
 		// do semantic check before injecting
 		if cmdName == "--inject" {
-			sema()
+			sema(args[1])
 		}
 		switch cmdName {
 		case "--inject", "--prune":
