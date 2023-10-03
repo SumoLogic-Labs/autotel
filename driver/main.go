@@ -295,6 +295,20 @@ func toolExecMain(args []string, rewriterS []alib.PackageRewriter, executor Comm
 	return nil
 }
 
+func printStack(stack []*ast.CallExpr) {
+	for len(stack) > 0 {
+		n := len(stack) - 1 // Top element
+		if sel, ok := stack[n].Fun.(*ast.SelectorExpr); ok {
+			if ident, ok := sel.X.(*ast.Ident); ok {
+				fmt.Print(ident.Name)
+			}
+			fmt.Print(".")
+			fmt.Print(sel.Sel.Name)
+		}
+		stack = stack[:n] // Pop
+	}
+}
+
 func InjectTracingCtx(call *ast.CallExpr, fset *token.FileSet, file *ast.File) {
 	var stack []*ast.CallExpr
 	stack = append(stack, call)
@@ -411,18 +425,7 @@ func InjectTracingCtx(call *ast.CallExpr, fset *token.FileSet, file *ast.File) {
 	}
 
 	stack[len(stack)-2].Fun.(*ast.SelectorExpr).X = parentSpanIdCallExpr
-	for len(stack) > 0 {
-		n := len(stack) - 1 // Top element
-		if sel, ok := stack[n].Fun.(*ast.SelectorExpr); ok {
-			if ident, ok := sel.X.(*ast.Ident); ok {
-				fmt.Print(ident.Name)
-			}
-			fmt.Print(".")
-			fmt.Print(sel.Sel.Name)
-		}
 
-		stack = stack[:n] // Pop
-	}
 	var out *os.File
 	out, err := createFile(fset.File(file.Pos()).Name() + "tmp")
 	if err != nil {
@@ -438,7 +441,6 @@ func InjectTracingCtx(call *ast.CallExpr, fset *token.FileSet, file *ast.File) {
 	if err != nil {
 		return
 	}
-	fmt.Println()
 }
 
 func makeRewriters(instrgenCfg InstrgenCmd) []alib.PackageRewriter {
