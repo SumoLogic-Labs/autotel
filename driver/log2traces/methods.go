@@ -18,6 +18,7 @@ package main
 import (
 	_ "go.opentelemetry.io/otel"
 	_ "context"
+	_ "go.opentelemetry.io/otel/sdk/trace"
         "github.com/rs/zerolog/log"
 )
 
