@@ -24,7 +24,7 @@ import (
 )
 
 func foo() {
-
+        log.Info().Msg("foo")
 	fmt.Println("foo")
 }
 
@@ -39,7 +39,7 @@ func FibonacciHelper(n uint) (uint64, error) {
 }
 
 func Fibonacci(n uint) (uint64, error) {
-
+        log.Info().Msg("Fibonacci")
 	if n <= 1 {
 		return uint64(n), nil
 	}

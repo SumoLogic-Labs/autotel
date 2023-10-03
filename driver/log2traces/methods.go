@@ -18,6 +18,7 @@ package main
 import (
 	_ "go.opentelemetry.io/otel"
 	_ "context"
+        "github.com/rs/zerolog/log"
 )
 
 type element struct {
@@ -53,7 +54,7 @@ func (e element) get(a int) {
 }
 
 func methods() {
-
+        log.Info().Msg("methods")
 	d := driver{}
 	d.process(10)
 	d.e.get(5)

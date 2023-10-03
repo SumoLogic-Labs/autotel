@@ -20,10 +20,12 @@ import (
 	_ "go.opentelemetry.io/otel"
 	_ "context"
 	_ "go.opentelemetry.io/otel/trace"
+        "github.com/rs/zerolog/log"
 )
 
 func goroutines() {
 
+        log.Info().Msg("goroutines")
 	messages := make(chan string)
 
 	go func() {
