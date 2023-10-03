@@ -364,7 +364,7 @@ func InjectTracingCtx(call *ast.CallExpr, fset *token.FileSet, file *ast.File) {
 		Lparen: 40,
 		Args: []ast.Expr{
 			&ast.Ident{
-				Name: "\"spand_id\"",
+				Name: "\"span_id\"",
 			},
 			&ast.CallExpr{
 				Fun: &ast.SelectorExpr{
@@ -390,8 +390,27 @@ func InjectTracingCtx(call *ast.CallExpr, fset *token.FileSet, file *ast.File) {
 		},
 		Ellipsis: 0,
 	}
+	selExpr3 := &ast.SelectorExpr{
+		X: spanIdCallExpr,
+		Sel: &ast.Ident{
+			Name: "Str",
+		},
+	}
+	parentSpanIdCallExpr := &ast.CallExpr{
+		Fun:    selExpr3,
+		Lparen: 40,
+		Args: []ast.Expr{
+			&ast.Ident{
+				Name: "\"parent_span_id\"",
+			},
+			&ast.Ident{
+				Name: "__atel_parent_span_id",
+			},
+		},
+		Ellipsis: 0,
+	}
 
-	stack[len(stack)-2].Fun.(*ast.SelectorExpr).X = spanIdCallExpr
+	stack[len(stack)-2].Fun.(*ast.SelectorExpr).X = parentSpanIdCallExpr
 	for len(stack) > 0 {
 		n := len(stack) - 1 // Top element
 		if sel, ok := stack[n].Fun.(*ast.SelectorExpr); ok {

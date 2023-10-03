@@ -173,6 +173,7 @@ func (OtelPruner) Rewrite(pkg string, file *ast.File, fset *token.FileSet, trace
 	astutil.DeleteNamedImport(fset, file, "__atel_otel", "go.opentelemetry.io/otel")
 	astutil.DeleteNamedImport(fset, file, "__atel_runtime", "runtime")
 	astutil.DeleteNamedImport(fset, file, "__atel_trace", "go.opentelemetry.io/otel/trace")
+	astutil.DeleteNamedImport(fset, file, "__atel_sdktrace", "go.opentelemetry.io/otel/sdk/trace")
 }
 
 // WriteExtraFiles.

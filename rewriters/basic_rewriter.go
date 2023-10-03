@@ -17,10 +17,9 @@ package rewriters // import "go.opentelemetry.io/contrib/instrgen/rewriters"
 import (
 	"go/ast"
 	"go/token"
+	"golang.org/x/tools/go/ast/astutil"
 	"os"
 	"strings"
-
-	"golang.org/x/tools/go/ast/astutil"
 )
 
 func makeInitStmts(name string) []ast.Stmt {
@@ -251,7 +250,115 @@ func makeInitStmts(name string) []ast.Stmt {
 			},
 		},
 	}
-	stmts := []ast.Stmt{s1, s2, s3, s4, s5, childTracingSupress, s6, s7, s8, s9}
+
+	s10 := &ast.AssignStmt{
+		Lhs: []ast.Expr{
+			&ast.Ident{
+				Name: "__atel_parent_span_id",
+			},
+		},
+		Tok: token.DEFINE,
+		Rhs: []ast.Expr{
+			&ast.BasicLit{
+				ValuePos: 45,
+				Kind:     token.STRING,
+				Value:    "\"\"",
+			},
+		},
+	}
+	s11 := &ast.IfStmt{
+		If: 35,
+		Init: &ast.AssignStmt{
+			Lhs: []ast.Expr{
+				&ast.Ident{
+					Name: "__atel_rdspan",
+				},
+				&ast.Ident{
+					Name: "ok",
+				},
+			},
+			Tok: token.DEFINE,
+			Rhs: []ast.Expr{
+				&ast.TypeAssertExpr{
+					X: &ast.Ident{
+						Name: "__atel_span",
+					},
+					Lparen: 71,
+					Type: &ast.SelectorExpr{
+						X: &ast.Ident{
+							Name: "__atel_sdktrace",
+						},
+						Sel: &ast.Ident{
+							Name: "ReadOnlySpan",
+						},
+					},
+				},
+			},
+		},
+		Cond: &ast.Ident{
+			Name: "ok",
+		},
+		Body: &ast.BlockStmt{
+			List: []ast.Stmt{
+				&ast.AssignStmt{
+					Lhs: []ast.Expr{
+						&ast.Ident{
+							Name: "__atel_parent_span_id",
+						},
+					},
+					Tok: token.ASSIGN,
+					Rhs: []ast.Expr{
+						&ast.CallExpr{
+							Fun: &ast.SelectorExpr{
+								X: &ast.CallExpr{
+									Fun: &ast.SelectorExpr{
+										X: &ast.CallExpr{
+											Fun: &ast.SelectorExpr{
+												X: &ast.Ident{
+													Name: "__atel_rdspan",
+												},
+												Sel: &ast.Ident{
+													Name: "Parent",
+												},
+											},
+											Lparen:   167,
+											Ellipsis: 0,
+										},
+										Sel: &ast.Ident{
+											Name: "SpanID",
+										},
+									},
+									Lparen:   176,
+									Ellipsis: 0,
+								},
+								Sel: &ast.Ident{
+									Name: "String",
+								},
+							},
+							Lparen:   185,
+							Ellipsis: 0,
+						},
+					},
+				},
+			},
+		},
+	}
+	s12 := &ast.AssignStmt{
+		Lhs: []ast.Expr{
+			&ast.Ident{
+				Name: "_",
+			},
+		},
+		Tok: token.ASSIGN,
+		Rhs: []ast.Expr{
+			&ast.Ident{
+				Name: "__atel_parent_span_id",
+			},
+		},
+	}
+	_ = s11
+	_ = s10
+	stmts := []ast.Stmt{s1, s2, s3, s4, s5, childTracingSupress, s6, s7, s8, s9, s10, s11, s12}
 	return stmts
 }
 
@@ -434,7 +541,116 @@ func makeSpanStmts(name string, paramName string) []ast.Stmt {
 			},
 		},
 	}
-	stmts := []ast.Stmt{s1, s2, s3, s4, s5, s6, s7}
+
+	s8 := &ast.AssignStmt{
+		Lhs: []ast.Expr{
+			&ast.Ident{
+				Name: "__atel_parent_span_id",
+			},
+		},
+		Tok: token.DEFINE,
+		Rhs: []ast.Expr{
+			&ast.BasicLit{
+				ValuePos: 45,
+				Kind:     token.STRING,
+				Value:    "\"\"",
+			},
+		},
+	}
+
+	s9 := &ast.IfStmt{
+		If: 35,
+		Init: &ast.AssignStmt{
+			Lhs: []ast.Expr{
+				&ast.Ident{
+					Name: "__atel_rdspan",
+				},
+				&ast.Ident{
+					Name: "ok",
+				},
+			},
+			Tok: token.DEFINE,
+			Rhs: []ast.Expr{
+				&ast.TypeAssertExpr{
+					X: &ast.Ident{
+						Name: "__atel_span",
+					},
+					Lparen: 71,
+					Type: &ast.SelectorExpr{
+						X: &ast.Ident{
+							Name: "__atel_sdktrace",
+						},
+						Sel: &ast.Ident{
+							Name: "ReadOnlySpan",
+						},
+					},
+				},
+			},
+		},
+		Cond: &ast.Ident{
+			Name: "ok",
+		},
+		Body: &ast.BlockStmt{
+			List: []ast.Stmt{
+				&ast.AssignStmt{
+					Lhs: []ast.Expr{
+						&ast.Ident{
+							Name: "__atel_parent_span_id",
+						},
+					},
+					Tok: token.ASSIGN,
+					Rhs: []ast.Expr{
+						&ast.CallExpr{
+							Fun: &ast.SelectorExpr{
+								X: &ast.CallExpr{
+									Fun: &ast.SelectorExpr{
+										X: &ast.CallExpr{
+											Fun: &ast.SelectorExpr{
+												X: &ast.Ident{
+													Name: "__atel_rdspan",
+												},
+												Sel: &ast.Ident{
+													Name: "Parent",
+												},
+											},
+											Lparen:   167,
+											Ellipsis: 0,
+										},
+										Sel: &ast.Ident{
+											Name: "SpanID",
+										},
+									},
+									Lparen:   176,
+									Ellipsis: 0,
+								},
+								Sel: &ast.Ident{
+									Name: "String",
+								},
+							},
+							Lparen:   185,
+							Ellipsis: 0,
+						},
+					},
+				},
+			},
+		},
+	}
+	s10 := &ast.AssignStmt{
+		Lhs: []ast.Expr{
+			&ast.Ident{
+				Name: "_",
+			},
+		},
+		Tok: token.ASSIGN,
+		Rhs: []ast.Expr{
+			&ast.Ident{
+				Name: "__atel_parent_span_id",
+			},
+		},
+	}
+	_ = s9
+	_ = s8
+	stmts := []ast.Stmt{s1, s2, s3, s4, s5, s6, s7, s8, s9, s10}
 
 	return stmts
 }
@@ -472,6 +688,7 @@ func (b BasicRewriter) Rewrite(pkg string, file *ast.File, fset *token.FileSet, 
 				funDeclNode.Body.List = append(makeSpanStmts(funDeclNode.Name.Name, "__atel_tracing_ctx"), funDeclNode.Body.List...)
 			}
 			astutil.AddNamedImport(fset, file, "__atel_trace", "go.opentelemetry.io/otel/trace")
+			astutil.AddNamedImport(fset, file, "__atel_sdktrace", "go.opentelemetry.io/otel/sdk/trace")
 			astutil.AddNamedImport(fset, file, "__atel_context", "context")
 			astutil.AddNamedImport(fset, file, "__atel_otel", "go.opentelemetry.io/otel")
 			astutil.AddNamedImport(fset, file, "__atel_runtime", "runtime")
