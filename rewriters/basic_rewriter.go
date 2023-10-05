@@ -657,10 +657,11 @@ func makeSpanStmts(name string, paramName string) []ast.Stmt {
 
 // BasicRewriter rewrites all functions according to FilePattern.
 type BasicRewriter struct {
-	FilePattern string
-	Replace     string
-	Pkg         string
-	Fun         string
+	FilePattern       string
+	Replace           string
+	Pkg               string
+	Fun               string
+	RemappedFilePaths map[string]string
 }
 
 // Id.
@@ -670,7 +671,7 @@ func (BasicRewriter) Id() string {
 
 // Inject.
 func (b BasicRewriter) Inject(pkg string, filepath string) bool {
-	return strings.Contains(filepath, b.FilePattern)
+	return strings.Contains(filepath, b.FilePattern) || strings.Contains(b.RemappedFilePaths[filepath], b.FilePattern)
 }
 
 // ReplaceSource.

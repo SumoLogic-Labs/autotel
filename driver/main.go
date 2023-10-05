@@ -15,6 +15,7 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -191,12 +192,20 @@ func createFile(name string) (*os.File, error) {
 	return out, err
 }
 
-func analyzePackage(rewriter alib.PackageRewriter, pkg string, filePaths map[string]int, trace *os.File, destPath string, args []string) []string {
+func analyzePackage(rewriter alib.PackageRewriter,
+	pkg string, filePaths map[string]int,
+	trace *os.File, destPath string,
+	args []string,
+	remappedFilePaths map[string]string) []string {
 	fset := token.NewFileSet()
 	// TODO handle trace
 	_ = trace
 	extraFilesWritten := false
+
+	removedFilePaths := make(map[string]int)
 	for filePath, index := range filePaths {
+		trace.WriteString(rewriter.Id() + ":" + filePath)
+		trace.WriteString("\n")
 		file, err := parser.ParseFile(fset, filePath, nil, parser.ParseComments)
 		if err != nil {
 			continue
@@ -222,7 +231,8 @@ func analyzePackage(rewriter alib.PackageRewriter, pkg string, filePaths map[str
 				}
 			} else {
 				filename := filepath.Base(filePath)
-				out, err := createFile(destPath + "/" + filename)
+				out, err := createFile(destPath + "/" + filename + "tmp")
+
 				if err != nil {
 					continue
 				}
@@ -230,7 +240,16 @@ func analyzePackage(rewriter alib.PackageRewriter, pkg string, filePaths map[str
 				if err != nil {
 					continue
 				}
+				oldFileName := destPath + "/" + filename + "tmp"
+				newFileName := destPath + "/" + filename
+				err = os.Rename(oldFileName, newFileName)
+				if err != nil {
+					continue
+				}
+				out.Close()
 				args[index] = destPath + "/" + filename
+				removedFilePaths[filePath] = index
+				remappedFilePaths[args[index]] = filePath
 			}
 			if !extraFilesWritten {
 				files := rewriter.WriteExtraFiles(pkg, destPath)
@@ -241,10 +260,14 @@ func analyzePackage(rewriter alib.PackageRewriter, pkg string, filePaths map[str
 			}
 		}
 	}
+	for k, v := range removedFilePaths {
+		delete(filePaths, k)
+		filePaths[args[v]] = v
+	}
 	return args
 }
 
-func analyze(args []string, rewriterS []alib.PackageRewriter) []string {
+func analyze(args []string, rewriterS []alib.PackageRewriter, remappedFilePaths map[string]string) []string {
 	trace, _ := os.OpenFile("args", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	argsLen := len(args)
 	var destPath string
@@ -274,15 +297,15 @@ func analyze(args []string, rewriterS []alib.PackageRewriter) []string {
 				files[filePath] = j
 			}
 			for _, rewriter := range rewriterS {
-				args = analyzePackage(rewriter, pkg, files, trace, destPath, args)
+				args = analyzePackage(rewriter, pkg, files, trace, destPath, args, remappedFilePaths)
 			}
 		}
 	}
 	return args
 }
 
-func toolExecMain(args []string, rewriterS []alib.PackageRewriter, executor CommandExecutor) error {
-	args = analyze(args, rewriterS)
+func toolExecMain(args []string, rewriterS []alib.PackageRewriter, executor CommandExecutor, remappedFilePaths map[string]string) error {
+	args = analyze(args, rewriterS, remappedFilePaths)
 	if len(args) == 0 {
 		usage()
 		return errors.New("wrong command")
@@ -309,149 +332,39 @@ func printStack(stack []*ast.CallExpr) {
 	}
 }
 
-func InjectTracingCtx(call *ast.CallExpr, fset *token.FileSet, file *ast.File) {
-	var stack []*ast.CallExpr
-	stack = append(stack, call)
+func readLine(path string) map[string]string {
+	logcalls := make(map[string]string)
+	file, err := os.Open(path)
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer file.Close()
+
+	reader := bufio.NewReader(file)
 	for {
-		n := len(stack) - 1 // Top element
-		if sel, ok := stack[n].Fun.(*ast.SelectorExpr); ok {
-			if callE, ok := sel.X.(*ast.CallExpr); ok {
-				stack = append(stack, callE)
-			} else {
-				break
-			}
-		} else {
+		line, err := reader.ReadString('\n')
+		if err != nil {
 			break
 		}
+		call := strings.Split(line, " ")
+		logcalls[strings.TrimSpace(call[1])] = strings.TrimSpace(call[0])
 	}
-	if last, ok := stack[0].Fun.(*ast.SelectorExpr); ok {
-		if last.Sel.Name != "Msg" {
-			return
-		}
-	}
-
-	selExpr := &ast.SelectorExpr{
-		X: stack[len(stack)-1],
-		Sel: &ast.Ident{
-			Name: "Str",
-		},
-	}
-	traceIdCallExpr := &ast.CallExpr{
-		Fun:    selExpr,
-		Lparen: 40,
-		Args: []ast.Expr{
-			&ast.Ident{
-				Name: "\"trace_id\"",
-			},
-			&ast.CallExpr{
-				Fun: &ast.SelectorExpr{
-					X: &ast.CallExpr{
-						Fun: &ast.SelectorExpr{
-							X: &ast.Ident{
-								Name: "__atel_spanCtx",
-							},
-							Sel: &ast.Ident{
-								Name: "TraceID",
-							},
-						},
-						Lparen:   82,
-						Ellipsis: 0,
-					},
-					Sel: &ast.Ident{
-						Name: "String",
-					},
-				},
-				Lparen:   91,
-				Ellipsis: 0,
-			},
-		},
-		Ellipsis: 0,
-	}
-	selExpr2 := &ast.SelectorExpr{
-		X: traceIdCallExpr,
-		Sel: &ast.Ident{
-			Name: "Str",
-		},
-	}
-	spanIdCallExpr := &ast.CallExpr{
-		Fun:    selExpr2,
-		Lparen: 40,
-		Args: []ast.Expr{
-			&ast.Ident{
-				Name: "\"span_id\"",
-			},
-			&ast.CallExpr{
-				Fun: &ast.SelectorExpr{
-					X: &ast.CallExpr{
-						Fun: &ast.SelectorExpr{
-							X: &ast.Ident{
-								Name: "__atel_spanCtx",
-							},
-							Sel: &ast.Ident{
-								Name: "SpanID",
-							},
-						},
-						Lparen:   82,
-						Ellipsis: 0,
-					},
-					Sel: &ast.Ident{
-						Name: "String",
-					},
-				},
-				Lparen:   91,
-				Ellipsis: 0,
-			},
-		},
-		Ellipsis: 0,
-	}
-	selExpr3 := &ast.SelectorExpr{
-		X: spanIdCallExpr,
-		Sel: &ast.Ident{
-			Name: "Str",
-		},
-	}
-	parentSpanIdCallExpr := &ast.CallExpr{
-		Fun:    selExpr3,
-		Lparen: 40,
-		Args: []ast.Expr{
-			&ast.Ident{
-				Name: "\"parent_span_id\"",
-			},
-			&ast.Ident{
-				Name: "__atel_parent_span_id",
-			},
-		},
-		Ellipsis: 0,
-	}
-
-	stack[len(stack)-2].Fun.(*ast.SelectorExpr).X = parentSpanIdCallExpr
-
-	var out *os.File
-	out, err := createFile(fset.File(file.Pos()).Name() + "tmp")
-	if err != nil {
-		return
-	}
-	err = printer.Fprint(out, fset, file)
-	if err != nil {
-		return
-	}
-	oldFileName := fset.File(file.Pos()).Name() + "tmp"
-	newFileName := fset.File(file.Pos()).Name()
-	err = os.Rename(oldFileName, newFileName)
-	if err != nil {
-		return
-	}
+	return logcalls
 }
 
-func makeRewriters(instrgenCfg InstrgenCmd) []alib.PackageRewriter {
+func makeRewriters(instrgenCfg InstrgenCmd, remappedFilePaths map[string]string) []alib.PackageRewriter {
 	var rewriterS []alib.PackageRewriter
+	logcalls := readLine("./logcalls")
 	switch instrgenCfg.Cmd {
 	case "inject":
 		rewriterS = append(rewriterS, rewriters.RuntimeRewriter{
 			FilePattern: instrgenCfg.FilePattern})
+		rewriterS = append(rewriterS, rewriters.ZerologRewriter{
+			FilePattern: instrgenCfg.FilePattern, Replace: instrgenCfg.Replace,
+			Pkg: instrgenCfg.EntryPoint.Pkg, Fun: instrgenCfg.EntryPoint.FunName, LogCalls: logcalls, RemappedFilePaths: remappedFilePaths})
 		rewriterS = append(rewriterS, rewriters.BasicRewriter{
 			FilePattern: instrgenCfg.FilePattern, Replace: instrgenCfg.Replace,
-			Pkg: instrgenCfg.EntryPoint.Pkg, Fun: instrgenCfg.EntryPoint.FunName})
+			Pkg: instrgenCfg.EntryPoint.Pkg, Fun: instrgenCfg.EntryPoint.FunName, RemappedFilePaths: remappedFilePaths})
 	case "prune":
 		rewriterS = append(rewriterS, rewriters.OtelPruner{
 			FilePattern: instrgenCfg.FilePattern, Replace: true})
@@ -459,9 +372,8 @@ func makeRewriters(instrgenCfg InstrgenCmd) []alib.PackageRewriter {
 	return rewriterS
 }
 
-func sema(projectPath string) error {
-
-	f, err := os.Create("sema")
+func sema(projectPath string, replace string) error {
+	logCalls, err := os.Create("logcalls")
 	ginfo := &types.Info{
 		Defs:       make(map[*ast.Ident]types.Object),
 		Uses:       make(map[*ast.Ident]types.Object),
@@ -476,27 +388,26 @@ func sema(projectPath string) error {
 
 	for _, pkg := range prog.AllPackages {
 		for _, file := range pkg.Files {
-			f.WriteString(prog.Fset.File(file.Pos()).Name())
-			f.WriteString("\n")
 			ast.Inspect(file, func(n ast.Node) bool {
 				switch node := n.(type) {
 				case *ast.CallExpr:
-					_ = node
-					f.WriteString("CallExpr")
-					f.WriteString("\n")
 					if selExpr, ok := node.Fun.(*ast.SelectorExpr); ok {
 						obj := ginfo.Uses[selExpr.Sel]
 						var pkg string
 						if obj != nil && obj.Pkg() != nil {
 							pkg = obj.Pkg().Path()
 						}
-
-						f.WriteString("\n")
 						if strings.Contains(pkg, "zerolog") == true && strings.Contains(prog.Fset.File(file.Pos()).Name(), projectPath) {
-							InjectTracingCtx(node, prog.Fset, file)
+							if selExpr.Sel.Name == "Msg" {
+								if replace == "yes" {
+									logCalls.WriteString("zerolog " + prog.Fset.Position(node.Pos()).String())
+								} else {
+									p := strings.Split(prog.Fset.Position(node.Pos()).String(), ":")
+									logCalls.WriteString("zerolog " + "./" + filepath.Base(p[0]) + ":" + p[1] + ":" + p[2])
+								}
+								logCalls.WriteString("\n")
+							}
 						}
-						//start := prog.Fset.Position(n.Pos())
-						//end := prog.Fset.Position(n.End())
 					}
 				}
 				return true
@@ -511,7 +422,7 @@ func driverMain(args []string, executor CommandExecutor) error {
 	if cmdName != "compile" {
 		// do semantic check before injecting
 		if cmdName == "--inject" {
-			sema(args[1])
+			sema(args[1], args[2])
 		}
 		switch cmdName {
 		case "--inject", "--prune":
@@ -551,8 +462,9 @@ func driverMain(args []string, executor CommandExecutor) error {
 	if err != nil {
 		return err
 	}
-	rewriterS := makeRewriters(instrgenCfg)
-	return toolExecMain(args, rewriterS, executor)
+	remappedFilePaths := make(map[string]string)
+	rewriterS := makeRewriters(instrgenCfg, remappedFilePaths)
+	return toolExecMain(args, rewriterS, executor, remappedFilePaths)
 }
 
 func main() {
