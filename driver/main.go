@@ -372,6 +372,20 @@ func makeRewriters(instrgenCfg InstrgenCmd, remappedFilePaths map[string]string)
 	return rewriterS
 }
 
+func updateLogCalls(lib string,
+	replace string,
+	prog *loader.Program,
+	node ast.Node,
+	logCalls *os.File) {
+	if replace == "yes" {
+		logCalls.WriteString(lib + prog.Fset.Position(node.Pos()).String())
+	} else {
+		p := strings.Split(prog.Fset.Position(node.Pos()).String(), ":")
+		logCalls.WriteString(lib + "./" + filepath.Base(p[0]) + ":" + p[1] + ":" + p[2])
+	}
+	logCalls.WriteString("\n")
+}
+
 func sema(projectPath string, replace string) error {
 	logCalls, err := os.Create("logcalls")
 	ginfo := &types.Info{
@@ -399,25 +413,23 @@ func sema(projectPath string, replace string) error {
 						}
 						if strings.Contains(pkg, "zerolog") == true && strings.Contains(prog.Fset.File(file.Pos()).Name(), projectPath) {
 							if selExpr.Sel.Name == "Msg" {
-								if replace == "yes" {
-									logCalls.WriteString("zerolog " + prog.Fset.Position(node.Pos()).String())
-								} else {
-									p := strings.Split(prog.Fset.Position(node.Pos()).String(), ":")
-									logCalls.WriteString("zerolog " + "./" + filepath.Base(p[0]) + ":" + p[1] + ":" + p[2])
-								}
-								logCalls.WriteString("\n")
+								updateLogCalls("zerolog ", replace, prog, node, logCalls)
 							}
 						}
 						if strings.Contains(pkg, "zap") == true && strings.Contains(prog.Fset.File(file.Pos()).Name(), projectPath) {
 							switch call := selExpr.Sel.Name; call {
 							case "Info", "Warn", "Error":
-								if replace == "yes" {
-									logCalls.WriteString("zap " + prog.Fset.Position(node.Pos()).String())
-								} else {
-									p := strings.Split(prog.Fset.Position(node.Pos()).String(), ":")
-									logCalls.WriteString("zap " + "./" + filepath.Base(p[0]) + ":" + p[1] + ":" + p[2])
-								}
-								logCalls.WriteString("\n")
+								updateLogCalls("zap ", replace, prog, node, logCalls)
+							}
+						}
+						if strings.Contains(pkg, "logrus") == true && strings.Contains(prog.Fset.File(file.Pos()).Name(), projectPath) {
+							switch call := selExpr.Sel.Name; call {
+							case "Info":
+								updateLogCalls("logrus ", replace, prog, node, logCalls)
+							case "Warn":
+								updateLogCalls("logrus ", replace, prog, node, logCalls)
+							case "Error":
+								updateLogCalls("logrus ", replace, prog, node, logCalls)
 							}
 						}
 					}
