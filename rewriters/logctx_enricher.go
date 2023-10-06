@@ -23,7 +23,7 @@ import (
 )
 
 // ZerologRewriter rewrites all functions according to FilePattern.
-type ZerologRewriter struct {
+type LogCtxEnricher struct {
 	FilePattern       string
 	Replace           string
 	Pkg               string
@@ -33,21 +33,21 @@ type ZerologRewriter struct {
 }
 
 // Id.
-func (ZerologRewriter) Id() string {
+func (LogCtxEnricher) Id() string {
 	return "Zerolog"
 }
 
 // Inject.
-func (b ZerologRewriter) Inject(pkg string, filepath string) bool {
+func (b LogCtxEnricher) Inject(pkg string, filepath string) bool {
 	return strings.Contains(filepath, b.FilePattern)
 }
 
 // ReplaceSource.
-func (b ZerologRewriter) ReplaceSource(pkg string, filePath string) bool {
+func (b LogCtxEnricher) ReplaceSource(pkg string, filePath string) bool {
 	return b.Replace == "yes"
 }
 
-func injectTracingCtx(call *ast.CallExpr) {
+func injectZeroLogTracingCtx(call *ast.CallExpr) {
 	var stack []*ast.CallExpr
 	stack = append(stack, call)
 	for {
@@ -164,8 +164,52 @@ func injectTracingCtx(call *ast.CallExpr) {
 	stack[len(stack)-2].Fun.(*ast.SelectorExpr).X = parentSpanIdCallExpr
 }
 
+func injectZapTracingCtx(call *ast.CallExpr) {
+	call.Args = append(call.Args, &ast.CallExpr{
+		Fun: &ast.SelectorExpr{
+			X: &ast.Ident{
+				Name: "zap",
+			},
+			Sel: &ast.Ident{
+				Name: "String",
+			},
+		},
+		Lparen: 74,
+		Args: []ast.Expr{
+			&ast.BasicLit{
+				ValuePos: 75,
+				Kind:     token.STRING,
+				Value:    "\"trace_id\"",
+			},
+			&ast.CallExpr{
+				Fun: &ast.SelectorExpr{
+					X: &ast.CallExpr{
+						Fun: &ast.SelectorExpr{
+							X: &ast.Ident{
+								Name: "__atel_spanCtx",
+							},
+							Sel: &ast.Ident{
+								Name: "TraceID",
+							},
+						},
+						Lparen:   82,
+						Ellipsis: 0,
+					},
+					Sel: &ast.Ident{
+						Name: "String",
+					},
+				},
+				Lparen:   91,
+				Ellipsis: 0,
+			},
+		},
+		Ellipsis: 0,
+	},
+	)
+}
+
 // Rewrite.
-func (b ZerologRewriter) Rewrite(pkg string, file *ast.File, fset *token.FileSet, trace *os.File) {
+func (b LogCtxEnricher) Rewrite(pkg string, file *ast.File, fset *token.FileSet, trace *os.File) {
 	ast.Inspect(file, func(n ast.Node) bool {
 		switch node := n.(type) {
 		case *ast.CallExpr:
@@ -178,7 +222,10 @@ func (b ZerologRewriter) Rewrite(pkg string, file *ast.File, fset *token.FileSet
 			}
 			if val, ok := b.LogCalls[key]; ok {
 				if val == "zerolog" {
-					injectTracingCtx(node)
+					injectZeroLogTracingCtx(node)
+				}
+				if val == "zap" {
+					injectZapTracingCtx(node)
 				}
 			}
 		}
@@ -187,6 +234,6 @@ func (b ZerologRewriter) Rewrite(pkg string, file *ast.File, fset *token.FileSet
 }
 
 // WriteExtraFiles.
-func (ZerologRewriter) WriteExtraFiles(pkg string, destPath string) []string {
+func (LogCtxEnricher) WriteExtraFiles(pkg string, destPath string) []string {
 	return nil
 }
