@@ -63,4 +63,5 @@ func main() {
 	pack()
 	methods()
 	test_zap()
+	test_logrus()
 }
