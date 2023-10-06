@@ -62,4 +62,5 @@ func main() {
 	goroutines()
 	pack()
 	methods()
+	test_zap()
 }
