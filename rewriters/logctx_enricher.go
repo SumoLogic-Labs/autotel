@@ -165,47 +165,111 @@ func injectZeroLogTracingCtx(call *ast.CallExpr) {
 }
 
 func injectZapTracingCtx(call *ast.CallExpr) {
-	call.Args = append(call.Args, &ast.CallExpr{
-		Fun: &ast.SelectorExpr{
-			X: &ast.Ident{
-				Name: "zap",
-			},
-			Sel: &ast.Ident{
-				Name: "String",
-			},
-		},
-		Lparen: 74,
-		Args: []ast.Expr{
-			&ast.BasicLit{
-				ValuePos: 75,
-				Kind:     token.STRING,
-				Value:    "\"trace_id\"",
-			},
-			&ast.CallExpr{
-				Fun: &ast.SelectorExpr{
-					X: &ast.CallExpr{
-						Fun: &ast.SelectorExpr{
-							X: &ast.Ident{
-								Name: "__atel_spanCtx",
-							},
-							Sel: &ast.Ident{
-								Name: "TraceID",
-							},
-						},
-						Lparen:   82,
-						Ellipsis: 0,
-					},
-					Sel: &ast.Ident{
-						Name: "String",
-					},
+	ctxcalls := []ast.Expr{
+		&ast.CallExpr{
+			Fun: &ast.SelectorExpr{
+				X: &ast.Ident{
+					Name: "zap",
 				},
-				Lparen:   91,
-				Ellipsis: 0,
+				Sel: &ast.Ident{
+					Name: "String",
+				},
 			},
+			Lparen: 74,
+			Args: []ast.Expr{
+				&ast.BasicLit{
+					ValuePos: 75,
+					Kind:     token.STRING,
+					Value:    "\"trace_id\"",
+				},
+				&ast.CallExpr{
+					Fun: &ast.SelectorExpr{
+						X: &ast.CallExpr{
+							Fun: &ast.SelectorExpr{
+								X: &ast.Ident{
+									Name: "__atel_spanCtx",
+								},
+								Sel: &ast.Ident{
+									Name: "TraceID",
+								},
+							},
+							Lparen:   82,
+							Ellipsis: 0,
+						},
+						Sel: &ast.Ident{
+							Name: "String",
+						},
+					},
+					Lparen:   91,
+					Ellipsis: 0,
+				},
+			},
+			Ellipsis: 0,
 		},
-		Ellipsis: 0,
-	},
-	)
+		&ast.CallExpr{
+			Fun: &ast.SelectorExpr{
+				X: &ast.Ident{
+					Name: "zap",
+				},
+				Sel: &ast.Ident{
+					Name: "String",
+				},
+			},
+			Lparen: 74,
+			Args: []ast.Expr{
+				&ast.BasicLit{
+					ValuePos: 75,
+					Kind:     token.STRING,
+					Value:    "\"span_id\"",
+				},
+				&ast.CallExpr{
+					Fun: &ast.SelectorExpr{
+						X: &ast.CallExpr{
+							Fun: &ast.SelectorExpr{
+								X: &ast.Ident{
+									Name: "__atel_spanCtx",
+								},
+								Sel: &ast.Ident{
+									Name: "SpanID",
+								},
+							},
+							Lparen:   82,
+							Ellipsis: 0,
+						},
+						Sel: &ast.Ident{
+							Name: "String",
+						},
+					},
+					Lparen:   91,
+					Ellipsis: 0,
+				},
+			},
+			Ellipsis: 0,
+		},
+		&ast.CallExpr{
+			Fun: &ast.SelectorExpr{
+				X: &ast.Ident{
+					Name: "zap",
+				},
+				Sel: &ast.Ident{
+					Name: "String",
+				},
+			},
+			Lparen: 74,
+			Args: []ast.Expr{
+				&ast.BasicLit{
+					ValuePos: 75,
+					Kind:     token.STRING,
+					Value:    "\"parent_span_id\"",
+				},
+				&ast.Ident{
+					Name: "__atel_parent_span_id",
+				},
+			},
+			Ellipsis: 0,
+		},
+	}
+	call.Args = append(call.Args, ctxcalls...)
 }
 
 // Rewrite.
