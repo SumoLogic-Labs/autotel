@@ -408,6 +408,18 @@ func sema(projectPath string, replace string) error {
 								logCalls.WriteString("\n")
 							}
 						}
+						if strings.Contains(pkg, "zap") == true && strings.Contains(prog.Fset.File(file.Pos()).Name(), projectPath) {
+							switch call := selExpr.Sel.Name; call {
+							case "Info", "Warn", "Error":
+								if replace == "yes" {
+									logCalls.WriteString("zap " + prog.Fset.Position(node.Pos()).String())
+								} else {
+									p := strings.Split(prog.Fset.Position(node.Pos()).String(), ":")
+									logCalls.WriteString("zap " + "./" + filepath.Base(p[0]) + ":" + p[1] + ":" + p[2])
+								}
+								logCalls.WriteString("\n")
+							}
+						}
 					}
 				}
 				return true
