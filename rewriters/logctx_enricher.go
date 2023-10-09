@@ -343,6 +343,46 @@ func injectLogrusTracingCtx(call *ast.CallExpr) {
 							Ellipsis: 0,
 						},
 					},
+					&ast.KeyValueExpr{
+						Key: &ast.BasicLit{
+							ValuePos: 104,
+							Kind:     token.STRING,
+							Value:    "\"span_id\"",
+						},
+						Colon: 113,
+						Value: &ast.CallExpr{
+							Fun: &ast.SelectorExpr{
+								X: &ast.CallExpr{
+									Fun: &ast.SelectorExpr{
+										X: &ast.Ident{
+											Name: "__atel_spanCtx",
+										},
+										Sel: &ast.Ident{
+											Name: "SpanID",
+										},
+									},
+									Lparen:   136,
+									Ellipsis: 0,
+								},
+								Sel: &ast.Ident{
+									Name: "String",
+								},
+							},
+							Lparen:   145,
+							Ellipsis: 0,
+						},
+					},
+					&ast.KeyValueExpr{
+						Key: &ast.BasicLit{
+							ValuePos: 148,
+							Kind:     token.STRING,
+							Value:    "\"parent_span_id\"",
+						},
+						Colon: 164,
+						Value: &ast.Ident{
+							Name: "__atel_parent_span_id",
+						},
+					},
 				},
 				Incomplete: false,
 			},
