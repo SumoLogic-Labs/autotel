@@ -272,6 +272,87 @@ func injectZapTracingCtx(call *ast.CallExpr) {
 	call.Args = append(call.Args, ctxcalls...)
 }
 
+func injectLogrusTracingCtx(call *ast.CallExpr) {
+	var stack []*ast.CallExpr
+	stack = append(stack, call)
+	for {
+		n := len(stack) - 1 // Top element
+		if sel, ok := stack[n].Fun.(*ast.SelectorExpr); ok {
+			if callE, ok := sel.X.(*ast.CallExpr); ok {
+				stack = append(stack, callE)
+			} else {
+				break
+			}
+		} else {
+			break
+		}
+	}
+	if last, ok := stack[0].Fun.(*ast.SelectorExpr); ok {
+		if last.Sel.Name != "Info" {
+			return
+		}
+	}
+
+	selExpr := &ast.SelectorExpr{
+		X: stack[len(stack)-1].Fun.(*ast.SelectorExpr).X,
+		Sel: &ast.Ident{
+			Name: "WithFields",
+		},
+	}
+
+	traceIdCallExpr := &ast.CallExpr{
+		Fun:    selExpr,
+		Lparen: 40,
+		Args: []ast.Expr{
+			&ast.CompositeLit{
+				Type: &ast.SelectorExpr{
+					X: &ast.Ident{
+						Name: "log",
+					},
+					Sel: &ast.Ident{
+						Name: "Fields",
+					},
+				},
+				Elts: []ast.Expr{
+					&ast.KeyValueExpr{
+						Key: &ast.BasicLit{
+							ValuePos: 56,
+							Kind:     token.STRING,
+							Value:    "\"trace_id\"",
+						},
+						Colon: 66,
+						Value: &ast.CallExpr{
+							Fun: &ast.SelectorExpr{
+								X: &ast.CallExpr{
+									Fun: &ast.SelectorExpr{
+										X: &ast.Ident{
+											Name: "__atel_spanCtx",
+										},
+										Sel: &ast.Ident{
+											Name: "TraceID",
+										},
+									},
+									Lparen:   91,
+									Ellipsis: 0,
+								},
+								Sel: &ast.Ident{
+									Name: "String",
+								},
+							},
+							Lparen:   100,
+							Ellipsis: 0,
+						},
+					},
+				},
+				Incomplete: false,
+			},
+		},
+		Ellipsis: 0,
+	}
+
+	stack[len(stack)-1].Fun.(*ast.SelectorExpr).X = traceIdCallExpr
+}
+
 // Rewrite.
 func (b LogCtxEnricher) Rewrite(pkg string, file *ast.File, fset *token.FileSet, trace *os.File) {
 	ast.Inspect(file, func(n ast.Node) bool {
@@ -290,6 +371,9 @@ func (b LogCtxEnricher) Rewrite(pkg string, file *ast.File, fset *token.FileSet,
 				}
 				if val == "zap" {
 					injectZapTracingCtx(node)
+				}
+				if val == "logrus" {
+					injectLogrusTracingCtx(node)
 				}
 			}
 		}
