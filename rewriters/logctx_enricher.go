@@ -288,7 +288,8 @@ func injectLogrusTracingCtx(call *ast.CallExpr) {
 		}
 	}
 	if last, ok := stack[0].Fun.(*ast.SelectorExpr); ok {
-		if last.Sel.Name != "Info" && last.Sel.Name != "Warn" && last.Sel.Name != "Error" && last.Sel.Name != "Fatalf" {
+		if last.Sel.Name != "Info" && last.Sel.Name != "Warn" &&
+			last.Sel.Name != "Error" && last.Sel.Name != "Fatalf" && last.Sel.Name != "Fatal" {
 			return
 		}
 	}

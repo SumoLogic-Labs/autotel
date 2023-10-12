@@ -432,6 +432,8 @@ func sema(projectPath string, replace string) error {
 								updateLogCalls("logrus ", replace, prog, node, logCalls)
 							case "Fatalf":
 								updateLogCalls("logrus ", replace, prog, node, logCalls)
+							case "Fatal":
+								updateLogCalls("logrus ", replace, prog, node, logCalls)
 							}
 						}
 					}
