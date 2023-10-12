@@ -307,7 +307,8 @@ func injectLogrusTracingCtx(call *ast.CallExpr) {
 			&ast.CompositeLit{
 				Type: &ast.SelectorExpr{
 					X: &ast.Ident{
-						Name: "log",
+						// TODO this should be taken according to pkg
+						Name: "logrus",
 					},
 					Sel: &ast.Ident{
 						Name: "Fields",
