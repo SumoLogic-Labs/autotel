@@ -272,7 +272,7 @@ func injectZapTracingCtx(call *ast.CallExpr) {
 	call.Args = append(call.Args, ctxcalls...)
 }
 
-func injectLogrusTracingCtx(call *ast.CallExpr) {
+func injectLogrusTracingCtx(call *ast.CallExpr, logrusPkg string) {
 	var stack []*ast.CallExpr
 	stack = append(stack, call)
 	for {
@@ -308,8 +308,7 @@ func injectLogrusTracingCtx(call *ast.CallExpr) {
 			&ast.CompositeLit{
 				Type: &ast.SelectorExpr{
 					X: &ast.Ident{
-						// TODO this should be taken according to pkg
-						Name: "logrus",
+						Name: logrusPkg,
 					},
 					Sel: &ast.Ident{
 						Name: "Fields",
@@ -397,8 +396,14 @@ func injectLogrusTracingCtx(call *ast.CallExpr) {
 
 // Rewrite.
 func (b LogCtxEnricher) Rewrite(pkg string, file *ast.File, fset *token.FileSet, trace *os.File) {
+	logrusPkg := "logrus"
+
 	ast.Inspect(file, func(n ast.Node) bool {
 		switch node := n.(type) {
+		case *ast.ImportSpec:
+			if node.Name != nil && strings.Contains(node.Path.Value, "logrus") {
+				logrusPkg = node.Name.Name
+			}
 		case *ast.CallExpr:
 			key := strings.TrimSpace(fset.Position(node.Pos()).String())
 			if b.Replace == "no" {
@@ -415,7 +420,7 @@ func (b LogCtxEnricher) Rewrite(pkg string, file *ast.File, fset *token.FileSet,
 					injectZapTracingCtx(node)
 				}
 				if val == "logrus" {
-					injectLogrusTracingCtx(node)
+					injectLogrusTracingCtx(node, logrusPkg)
 				}
 			}
 		}
