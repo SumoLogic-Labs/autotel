@@ -17,7 +17,7 @@ package main
 
 import (
 	"fmt"
-	"go.opentelemetry.io/contrib/instrgen/rtlib"
+	_ "go.opentelemetry.io/contrib/instrgen/rtlib"
 	_ "go.opentelemetry.io/otel"
 	_ "context"
 	_ "go.opentelemetry.io/otel/trace"
@@ -56,7 +56,7 @@ func main() {
 	setup()
 
 	log.Info().Msg("main")
-	rtlib.AutotelEntryPoint()
+	//rtlib.AutotelEntryPoint()
 	fmt.Println(FibonacciHelper(10))
 	recur(5)
 	goroutines()

@@ -693,6 +693,7 @@ func (b BasicRewriter) Rewrite(pkg string, file *ast.File, fset *token.FileSet, 
 			astutil.AddNamedImport(fset, file, "__atel_context", "context")
 			astutil.AddNamedImport(fset, file, "__atel_otel", "go.opentelemetry.io/otel")
 			astutil.AddNamedImport(fset, file, "__atel_runtime", "runtime")
+			astutil.AddImport(fset, file, "go.opentelemetry.io/contrib/instrgen/rtlib")
 		}
 		return true
 	})
