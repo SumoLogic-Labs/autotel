@@ -56,7 +56,6 @@ func main() {
 	setup()
 
 	log.Info().Msg("main")
-	//rtlib.AutotelEntryPoint()
 	fmt.Println(FibonacciHelper(10))
 	recur(5)
 	goroutines()
