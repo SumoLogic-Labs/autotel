@@ -21,6 +21,7 @@ import (
 	"time"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"log2traces/util"
 )
 
 func setup() {
@@ -58,4 +59,5 @@ func main() {
 	methods()
 	test_zap()
 	test_logrus()
+	util.Util()
 }
