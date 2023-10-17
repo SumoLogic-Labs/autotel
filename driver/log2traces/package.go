@@ -17,10 +17,6 @@ package main
 
 import (
 	"os"
-	_ "go.opentelemetry.io/otel"
-	_ "context"
-	_ "go.opentelemetry.io/otel/trace"
-	_ "go.opentelemetry.io/otel/sdk/trace"
 )
 
 func Close() error {
