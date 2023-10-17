@@ -684,6 +684,7 @@ func (b BasicRewriter) Rewrite(pkg string, file *ast.File, fset *token.FileSet, 
 	ast.Inspect(file, func(n ast.Node) bool {
 		if funDeclNode, ok := n.(*ast.FuncDecl); ok {
 			if pkg == b.Pkg && funDeclNode.Name.Name == b.Fun {
+				astutil.AddImport(fset, file, "go.opentelemetry.io/contrib/instrgen/rtlib")
 				funDeclNode.Body.List = append(makeInitStmts(funDeclNode.Name.Name), funDeclNode.Body.List...)
 			} else {
 				funDeclNode.Body.List = append(makeSpanStmts(funDeclNode.Name.Name, "__atel_tracing_ctx"), funDeclNode.Body.List...)
@@ -693,7 +694,6 @@ func (b BasicRewriter) Rewrite(pkg string, file *ast.File, fset *token.FileSet, 
 			astutil.AddNamedImport(fset, file, "__atel_context", "context")
 			astutil.AddNamedImport(fset, file, "__atel_otel", "go.opentelemetry.io/otel")
 			astutil.AddNamedImport(fset, file, "__atel_runtime", "runtime")
-			astutil.AddImport(fset, file, "go.opentelemetry.io/contrib/instrgen/rtlib")
 		}
 		return true
 	})
