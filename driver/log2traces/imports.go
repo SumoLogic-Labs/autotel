@@ -1,3 +1,5 @@
+package main
+
 import (
     _ "go.opentelemetry.io/contrib/instrgen/rtlib"
     _ "go.opentelemetry.io/otel"
