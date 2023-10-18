@@ -182,16 +182,6 @@ func GetCommandName(args []string) string {
 	return cmd
 }
 
-func createFile(name string) (*os.File, error) {
-	var out *os.File
-	out, err := os.Create(name)
-
-	if err != nil {
-		return nil, err
-	}
-	return out, err
-}
-
 func analyzePackage(rewriter alib.PackageRewriter,
 	pkg string, filePaths map[string]int,
 	trace *os.File, destPath string,
@@ -215,7 +205,7 @@ func analyzePackage(rewriter alib.PackageRewriter,
 
 			if rewriter.ReplaceSource(pkg, filePath) {
 				var out *os.File
-				out, err = createFile(fset.File(file.Pos()).Name() + "tmp")
+				out, err = alib.CreateFile(fset.File(file.Pos()).Name() + "tmp")
 				if err != nil {
 					continue
 				}
@@ -231,7 +221,7 @@ func analyzePackage(rewriter alib.PackageRewriter,
 				}
 			} else {
 				filename := filepath.Base(filePath)
-				out, err := createFile(destPath + "/" + filename + "tmp")
+				out, err := alib.CreateFile(destPath + "/" + filename + "tmp")
 
 				if err != nil {
 					continue
@@ -386,20 +376,12 @@ func updateLogCalls(lib string,
 	logCalls.WriteString("\n")
 }
 
-func sema(projectPath string, replace string) error {
+func sema(projectPath string, replace string, prog *loader.Program, ginfo *types.Info) error {
 	logCalls, err := os.Create("logcalls")
-	ginfo := &types.Info{
-		Defs:       make(map[*ast.Ident]types.Object),
-		Uses:       make(map[*ast.Ident]types.Object),
-		Selections: make(map[*ast.SelectorExpr]*types.Selection),
-	}
-
-	prog, err := LoadProgram(".", ginfo)
 	if err != nil {
 		fmt.Println(err)
 		return err
 	}
-
 	for _, pkg := range prog.AllPackages {
 		for _, file := range pkg.Files {
 			ast.Inspect(file, func(n ast.Node) bool {
@@ -445,12 +427,64 @@ func sema(projectPath string, replace string) error {
 	return nil
 }
 
+func goModTidy(projectPath string, replace string, prog *loader.Program, ginfo *types.Info) {
+	for _, pkg := range prog.AllPackages {
+		if len(pkg.Files) > 0 {
+			path := prog.Fset.File(pkg.Files[0].Pos()).Name()
+			if !strings.Contains(path, projectPath) {
+				continue
+			}
+			if !alib.FileExists(filepath.Dir(path) + "/instrgen_imports.go") {
+				f, err := alib.CreateFile(filepath.Dir(path) + "/instrgen_imports.go")
+				if err != nil {
+					fmt.Println(err)
+					return
+				}
+				imports :=
+					`package ` + pkg.Pkg.Name() + `
+import (
+	_ "go.opentelemetry.io/contrib/instrgen/rtlib"
+	_ "go.opentelemetry.io/otel"
+	_ "context"
+	_ "runtime"
+	_ "go.opentelemetry.io/otel/trace"
+	_ "go.opentelemetry.io/otel/sdk/trace"
+)
+`
+				_, err = f.WriteString(imports)
+				if err != nil {
+					fmt.Println(err)
+					return
+				}
+			}
+		}
+	}
+	executor := &ToolExecutor{}
+	executor.Execute("go", []string{"mod", "tidy"})
+	fmt.Println("invoke : " + executor.cmd.String())
+	if err := executor.Run(); err != nil {
+		fmt.Println(err)
+	}
+}
+
 func driverMain(args []string, executor CommandExecutor) error {
 	cmdName := GetCommandName(args)
 	if cmdName != "compile" {
 		// do semantic check before injecting
 		if cmdName == "--inject" {
-			sema(args[1], args[2])
+			ginfo := &types.Info{
+				Defs:       make(map[*ast.Ident]types.Object),
+				Uses:       make(map[*ast.Ident]types.Object),
+				Selections: make(map[*ast.SelectorExpr]*types.Selection),
+			}
+
+			prog, err := LoadProgram(".", ginfo)
+			if err != nil {
+				fmt.Println(err)
+				return err
+			}
+			sema(args[1], args[2], prog, ginfo)
+			goModTidy(args[1], args[2], prog, ginfo)
 		}
 		switch cmdName {
 		case "--inject", "--prune":

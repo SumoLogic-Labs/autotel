@@ -34,6 +34,17 @@ func SearchFiles(root string, ext string) []string {
 	return files
 }
 
+// CreateFile.
+func CreateFile(name string) (*os.File, error) {
+	var out *os.File
+	out, err := os.Create(name)
+
+	if err != nil {
+		return nil, err
+	}
+	return out, err
+}
+
 // FileExists.
 func FileExists(filename string) bool {
 	info, err := os.Stat(filename)
