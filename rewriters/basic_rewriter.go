@@ -363,7 +363,7 @@ func makeInitStmts(name string) []ast.Stmt {
 }
 
 func makeSpanStmts(name string, paramName string) []ast.Stmt {
-	s1 := &ast.AssignStmt{
+	s0 := &ast.AssignStmt{
 		Lhs: []ast.Expr{
 			&ast.Ident{
 				Name: "__atel_tracing_ctx",
@@ -371,26 +371,74 @@ func makeSpanStmts(name string, paramName string) []ast.Stmt {
 		},
 		Tok: token.DEFINE,
 		Rhs: []ast.Expr{
-			&ast.TypeAssertExpr{
-				X: &ast.CallExpr{
-					Fun: &ast.SelectorExpr{
-						X: &ast.Ident{
-							Name: "__atel_runtime",
-						},
-						Sel: &ast.Ident{
-							Name: "InstrgenGetTls",
-						},
-					},
-					Lparen:   78,
-					Ellipsis: 0,
-				},
-				Lparen: 81,
-				Type: &ast.SelectorExpr{
+			&ast.CallExpr{
+				Fun: &ast.SelectorExpr{
 					X: &ast.Ident{
 						Name: "__atel_context",
 					},
 					Sel: &ast.Ident{
-						Name: "Context",
+						Name: "Background",
+					},
+				},
+				Lparen:   67,
+				Ellipsis: 0,
+			},
+		},
+	}
+	s1 := &ast.IfStmt{
+		If: 35,
+		Init: &ast.AssignStmt{
+			Lhs: []ast.Expr{
+				&ast.Ident{
+					Name: "__atel_tracing_ctx_runtime",
+				},
+				&ast.Ident{
+					Name: "ok",
+				},
+			},
+			Tok: token.DEFINE,
+			Rhs: []ast.Expr{
+				&ast.TypeAssertExpr{
+					X: &ast.CallExpr{
+						Fun: &ast.SelectorExpr{
+							X: &ast.Ident{
+								Name: "__atel_runtime",
+							},
+							Sel: &ast.Ident{
+								Name: "InstrgenGetTls",
+							},
+						},
+						Lparen:   93,
+						Ellipsis: 0,
+					},
+					Lparen: 96,
+					Type: &ast.SelectorExpr{
+						X: &ast.Ident{
+							Name: "__atel_context",
+						},
+						Sel: &ast.Ident{
+							Name: "Context",
+						},
+					},
+				},
+			},
+		},
+		Cond: &ast.Ident{
+			Name: "ok",
+		},
+		Body: &ast.BlockStmt{
+			List: []ast.Stmt{
+				&ast.AssignStmt{
+					Lhs: []ast.Expr{
+						&ast.Ident{
+							Name: "__atel_tracing_ctx",
+						},
+					},
+					Tok: token.ASSIGN,
+					Rhs: []ast.Expr{
+						&ast.Ident{
+							Name: "__atel_tracing_ctx_runtime",
+						},
 					},
 				},
 			},
@@ -650,7 +698,7 @@ func makeSpanStmts(name string, paramName string) []ast.Stmt {
 	}
 	_ = s9
 	_ = s8
-	stmts := []ast.Stmt{s1, s2, s3, s4, s5, s6, s7, s8, s9, s10}
+	stmts := []ast.Stmt{s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10}
 
 	return stmts
 }
