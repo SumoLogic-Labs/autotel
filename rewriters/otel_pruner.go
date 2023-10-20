@@ -48,6 +48,15 @@ func inspectFuncContent(fType *ast.FuncType, fBody *ast.BlockStmt) {
 	for index := 0; index < len(fBody.List); index++ {
 		stmt := fBody.List[index]
 		switch bodyStmt := stmt.(type) {
+		case *ast.IfStmt:
+			if assigment, ok := bodyStmt.Init.(*ast.AssignStmt); ok {
+				if ident, ok := assigment.Lhs[0].(*ast.Ident); ok {
+					if strings.Contains(ident.Name, "__atel_") {
+						fBody.List = removeStmt(fBody.List, index)
+						index--
+					}
+				}
+			}
 		case *ast.AssignStmt:
 			if ident, ok := bodyStmt.Lhs[0].(*ast.Ident); ok {
 				if strings.Contains(ident.Name, "__atel_") {
