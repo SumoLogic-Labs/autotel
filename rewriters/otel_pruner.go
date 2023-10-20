@@ -35,14 +35,16 @@ func removeExpr(slice []ast.Expr, s int) []ast.Expr {
 	return append(slice[:s], slice[s+1:]...)
 }
 
-func inspectFuncContent(fType *ast.FuncType, fBody *ast.BlockStmt) bool {
+func inspectFuncContent(fType *ast.FuncType, fBody *ast.BlockStmt, remove bool) bool {
 	instrgenCode := false
 	for index := 0; index < len(fType.Params.List); index++ {
 		param := fType.Params.List[index]
 		for _, ident := range param.Names {
 			if strings.Contains(ident.Name, "__atel_") {
-				fType.Params.List = removeField(fType.Params.List, index)
-				index--
+				if remove == true {
+					fType.Params.List = removeField(fType.Params.List, index)
+					index--
+				}
 				instrgenCode = true
 			}
 		}
@@ -54,8 +56,10 @@ func inspectFuncContent(fType *ast.FuncType, fBody *ast.BlockStmt) bool {
 			if assigment, ok := bodyStmt.Init.(*ast.AssignStmt); ok {
 				if ident, ok := assigment.Lhs[0].(*ast.Ident); ok {
 					if strings.Contains(ident.Name, "__atel_") {
-						fBody.List = removeStmt(fBody.List, index)
-						index--
+						if remove == true {
+							fBody.List = removeStmt(fBody.List, index)
+							index--
+						}
 						instrgenCode = true
 					}
 				}
@@ -63,15 +67,19 @@ func inspectFuncContent(fType *ast.FuncType, fBody *ast.BlockStmt) bool {
 		case *ast.AssignStmt:
 			if ident, ok := bodyStmt.Lhs[0].(*ast.Ident); ok {
 				if strings.Contains(ident.Name, "__atel_") {
-					fBody.List = removeStmt(fBody.List, index)
-					index--
+					if remove == true {
+						fBody.List = removeStmt(fBody.List, index)
+						index--
+					}
 					instrgenCode = true
 				}
 			}
 			if ident, ok := bodyStmt.Rhs[0].(*ast.Ident); ok {
 				if strings.Contains(ident.Name, "__atel_") {
-					fBody.List = removeStmt(fBody.List, index)
-					index--
+					if remove == true {
+						fBody.List = removeStmt(fBody.List, index)
+						index--
+					}
 					instrgenCode = true
 				}
 			}
@@ -79,13 +87,17 @@ func inspectFuncContent(fType *ast.FuncType, fBody *ast.BlockStmt) bool {
 			if call, ok := bodyStmt.X.(*ast.CallExpr); ok {
 				if sel, ok := call.Fun.(*ast.SelectorExpr); ok {
 					if strings.Contains(sel.Sel.Name, "SetTracerProvider") {
-						fBody.List = removeStmt(fBody.List, index)
-						index--
+						if remove == true {
+							fBody.List = removeStmt(fBody.List, index)
+							index--
+						}
 						instrgenCode = true
 					}
 					if strings.Contains(sel.Sel.Name, "InstrgenSetTls") {
-						fBody.List = removeStmt(fBody.List, index)
-						index--
+						if remove == true {
+							fBody.List = removeStmt(fBody.List, index)
+							index--
+						}
 						instrgenCode = true
 					}
 				}
@@ -95,16 +107,20 @@ func inspectFuncContent(fType *ast.FuncType, fBody *ast.BlockStmt) bool {
 				if strings.Contains(sel.Sel.Name, "Shutdown") {
 					if ident, ok := sel.X.(*ast.Ident); ok {
 						if strings.Contains(ident.Name, "rtlib") {
-							fBody.List = removeStmt(fBody.List, index)
-							index--
+							if remove == true {
+								fBody.List = removeStmt(fBody.List, index)
+								index--
+							}
 							instrgenCode = true
 						}
 					}
 				}
 				if ident, ok := sel.X.(*ast.Ident); ok {
 					if strings.Contains(ident.Name, "__atel_") {
-						fBody.List = removeStmt(fBody.List, index)
-						index--
+						if remove == true {
+							fBody.List = removeStmt(fBody.List, index)
+							index--
+						}
 						instrgenCode = true
 					}
 				}
@@ -114,21 +130,22 @@ func inspectFuncContent(fType *ast.FuncType, fBody *ast.BlockStmt) bool {
 	return instrgenCode
 }
 
-// Inspect.
-func Inspect(file *ast.File) bool {
+func inspect(file *ast.File, remove bool) bool {
 	instrgenCode := false
 	ast.Inspect(file, func(n ast.Node) bool {
 		switch x := n.(type) {
 		case *ast.FuncDecl:
 			if x.Body != nil {
-				instrgenCode = inspectFuncContent(x.Type, x.Body)
+				instrgenCode = inspectFuncContent(x.Type, x.Body, remove)
 			}
 		case *ast.CallExpr:
 			for argIndex := 0; argIndex < len(x.Args); argIndex++ {
 				if ident, ok := x.Args[argIndex].(*ast.Ident); ok {
 					if strings.Contains(ident.Name, "__atel_") {
-						x.Args = removeExpr(x.Args, argIndex)
-						argIndex--
+						if remove == true {
+							x.Args = removeExpr(x.Args, argIndex)
+							argIndex--
+						}
 						instrgenCode = true
 					}
 				}
@@ -138,8 +155,10 @@ func Inspect(file *ast.File) bool {
 					if sel, ok := c.Fun.(*ast.SelectorExpr); ok {
 						if ident, ok := sel.X.(*ast.Ident); ok {
 							if strings.Contains(ident.Name, "__atel_") {
-								x.Args = removeExpr(x.Args, argIndex)
-								argIndex--
+								if remove == true {
+									x.Args = removeExpr(x.Args, argIndex)
+									argIndex--
+								}
 								instrgenCode = true
 							}
 						}
@@ -147,7 +166,7 @@ func Inspect(file *ast.File) bool {
 				}
 			}
 		case *ast.FuncLit:
-			instrgenCode = inspectFuncContent(x.Type, x.Body)
+			instrgenCode = inspectFuncContent(x.Type, x.Body, remove)
 		case *ast.TypeSpec:
 			iface, ok := x.Type.(*ast.InterfaceType)
 			if !ok {
@@ -161,8 +180,10 @@ func Inspect(file *ast.File) bool {
 				for argIndex := 0; argIndex < len(funcType.Params.List); argIndex++ {
 					for _, ident := range funcType.Params.List[argIndex].Names {
 						if strings.Contains(ident.Name, "__atel_") {
-							funcType.Params.List = removeField(funcType.Params.List, argIndex)
-							argIndex--
+							if remove == true {
+								funcType.Params.List = removeField(funcType.Params.List, argIndex)
+								argIndex--
+							}
 							instrgenCode = true
 						}
 					}
@@ -197,7 +218,7 @@ func (pruner OtelPruner) ReplaceSource(pkg string, filePath string) bool {
 
 // Rewrite.
 func (OtelPruner) Rewrite(pkg string, file *ast.File, fset *token.FileSet, trace *os.File) {
-	Inspect(file)
+	inspect(file, true)
 	astutil.DeleteNamedImport(fset, file, "__atel_context", "context")
 	astutil.DeleteNamedImport(fset, file, "__atel_otel", "go.opentelemetry.io/otel")
 	astutil.DeleteNamedImport(fset, file, "__atel_runtime", "runtime")
