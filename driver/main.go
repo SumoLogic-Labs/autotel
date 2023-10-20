@@ -36,11 +36,23 @@ import (
 	"go.opentelemetry.io/contrib/instrgen/rewriters"
 )
 
+const (
+	InfoColor    = "\033[1;34m%s\033[0m"
+	NoticeColor  = "\033[1;36m%s\033[0m"
+	WarningColor = "\033[1;33m%s\033[0m"
+	ErrorColor   = "\033[1;31m%s\033[0m"
+	DebugColor   = "\033[0;36m%s\033[0m"
+)
+
 func usage() {
-	fmt.Println("\nusage driver --command [file pattern] replace entrypoint")
-	fmt.Println("\tcommand:")
-	fmt.Println("\t\tinject                                 (injects open telemetry calls into project code)")
-	fmt.Println("\t\tprune                                  (prune open telemetry calls")
+	fmt.Printf(InfoColor, "\nusage driver --command [file pattern] replace entrypoint")
+	fmt.Println()
+	fmt.Printf(InfoColor, "\tcommand:")
+	fmt.Println()
+	fmt.Printf(InfoColor, "\t\tinject                                 (injects open telemetry calls into project code)")
+	fmt.Println()
+	fmt.Printf(InfoColor, "\t\tprune                                  (prune open telemetry calls")
+	fmt.Println()
 }
 
 // Entry point function.
@@ -345,6 +357,7 @@ func readLine(path string) map[string]string {
 func makeRewriters(instrgenCfg InstrgenCmd, remappedFilePaths map[string]string) []alib.PackageRewriter {
 	var rewriterS []alib.PackageRewriter
 	logcalls := readLine("./logcalls")
+	_ = logcalls
 	switch instrgenCfg.Cmd {
 	case "inject":
 		rewriterS = append(rewriterS, rewriters.RuntimeRewriter{
@@ -480,7 +493,7 @@ func driverMain(args []string, executor CommandExecutor) error {
 
 			prog, err := LoadProgram(".", ginfo)
 			if err != nil {
-				fmt.Println(err)
+				err = errors.New("Load failed : " + err.Error())
 				return err
 			}
 			sema(args[1], args[2], prog, ginfo)
@@ -533,6 +546,8 @@ func main() {
 	executor := &ToolExecutor{}
 	err := driverMain(os.Args[1:], executor)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println()
+		fmt.Printf(ErrorColor, err.Error())
+		fmt.Println()
 	}
 }
