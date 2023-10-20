@@ -474,7 +474,7 @@ import (
 	}
 	executor := &ToolExecutor{}
 	executor.Execute("go", []string{"mod", "tidy"})
-	fmt.Println("invoke : " + executor.cmd.String())
+	fmt.Printf(InfoColor, "invoke : "+executor.cmd.String()+"\n")
 	if err := executor.Run(); err != nil {
 		fmt.Println(err)
 	}
@@ -490,7 +490,7 @@ func driverMain(args []string, executor CommandExecutor) error {
 				Uses:       make(map[*ast.Ident]types.Object),
 				Selections: make(map[*ast.SelectorExpr]*types.Selection),
 			}
-
+			fmt.Printf(InfoColor, "instrgen semantic analysis...\n")
 			prog, err := LoadProgram(".", ginfo)
 			if err != nil {
 				err = errors.New("Load failed : " + err.Error())
@@ -501,7 +501,7 @@ func driverMain(args []string, executor CommandExecutor) error {
 		}
 		switch cmdName {
 		case "--inject", "--prune":
-			fmt.Println("instrgen compiler")
+			fmt.Printf(InfoColor, "instrgen compiler\n")
 			err := checkArgs(args)
 			if err != nil {
 				usage()
