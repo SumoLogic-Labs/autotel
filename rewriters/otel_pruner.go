@@ -35,13 +35,15 @@ func removeExpr(slice []ast.Expr, s int) []ast.Expr {
 	return append(slice[:s], slice[s+1:]...)
 }
 
-func inspectFuncContent(fType *ast.FuncType, fBody *ast.BlockStmt) {
+func inspectFuncContent(fType *ast.FuncType, fBody *ast.BlockStmt) bool {
+	instrgenCode := false
 	for index := 0; index < len(fType.Params.List); index++ {
 		param := fType.Params.List[index]
 		for _, ident := range param.Names {
 			if strings.Contains(ident.Name, "__atel_") {
 				fType.Params.List = removeField(fType.Params.List, index)
 				index--
+				instrgenCode = true
 			}
 		}
 	}
@@ -54,6 +56,7 @@ func inspectFuncContent(fType *ast.FuncType, fBody *ast.BlockStmt) {
 					if strings.Contains(ident.Name, "__atel_") {
 						fBody.List = removeStmt(fBody.List, index)
 						index--
+						instrgenCode = true
 					}
 				}
 			}
@@ -62,12 +65,14 @@ func inspectFuncContent(fType *ast.FuncType, fBody *ast.BlockStmt) {
 				if strings.Contains(ident.Name, "__atel_") {
 					fBody.List = removeStmt(fBody.List, index)
 					index--
+					instrgenCode = true
 				}
 			}
 			if ident, ok := bodyStmt.Rhs[0].(*ast.Ident); ok {
 				if strings.Contains(ident.Name, "__atel_") {
 					fBody.List = removeStmt(fBody.List, index)
 					index--
+					instrgenCode = true
 				}
 			}
 		case *ast.ExprStmt:
@@ -76,10 +81,12 @@ func inspectFuncContent(fType *ast.FuncType, fBody *ast.BlockStmt) {
 					if strings.Contains(sel.Sel.Name, "SetTracerProvider") {
 						fBody.List = removeStmt(fBody.List, index)
 						index--
+						instrgenCode = true
 					}
 					if strings.Contains(sel.Sel.Name, "InstrgenSetTls") {
 						fBody.List = removeStmt(fBody.List, index)
 						index--
+						instrgenCode = true
 					}
 				}
 			}
@@ -90,6 +97,7 @@ func inspectFuncContent(fType *ast.FuncType, fBody *ast.BlockStmt) {
 						if strings.Contains(ident.Name, "rtlib") {
 							fBody.List = removeStmt(fBody.List, index)
 							index--
+							instrgenCode = true
 						}
 					}
 				}
@@ -97,11 +105,73 @@ func inspectFuncContent(fType *ast.FuncType, fBody *ast.BlockStmt) {
 					if strings.Contains(ident.Name, "__atel_") {
 						fBody.List = removeStmt(fBody.List, index)
 						index--
+						instrgenCode = true
 					}
 				}
 			}
 		}
 	}
+	return instrgenCode
+}
+
+// Inspect.
+func Inspect(file *ast.File) bool {
+	instrgenCode := false
+	ast.Inspect(file, func(n ast.Node) bool {
+		switch x := n.(type) {
+		case *ast.FuncDecl:
+			if x.Body != nil {
+				instrgenCode = inspectFuncContent(x.Type, x.Body)
+			}
+		case *ast.CallExpr:
+			for argIndex := 0; argIndex < len(x.Args); argIndex++ {
+				if ident, ok := x.Args[argIndex].(*ast.Ident); ok {
+					if strings.Contains(ident.Name, "__atel_") {
+						x.Args = removeExpr(x.Args, argIndex)
+						argIndex--
+						instrgenCode = true
+					}
+				}
+			}
+			for argIndex := 0; argIndex < len(x.Args); argIndex++ {
+				if c, ok := x.Args[argIndex].(*ast.CallExpr); ok {
+					if sel, ok := c.Fun.(*ast.SelectorExpr); ok {
+						if ident, ok := sel.X.(*ast.Ident); ok {
+							if strings.Contains(ident.Name, "__atel_") {
+								x.Args = removeExpr(x.Args, argIndex)
+								argIndex--
+								instrgenCode = true
+							}
+						}
+					}
+				}
+			}
+		case *ast.FuncLit:
+			instrgenCode = inspectFuncContent(x.Type, x.Body)
+		case *ast.TypeSpec:
+			iface, ok := x.Type.(*ast.InterfaceType)
+			if !ok {
+				return true
+			}
+			for _, method := range iface.Methods.List {
+				funcType, ok := method.Type.(*ast.FuncType)
+				if !ok {
+					continue
+				}
+				for argIndex := 0; argIndex < len(funcType.Params.List); argIndex++ {
+					for _, ident := range funcType.Params.List[argIndex].Names {
+						if strings.Contains(ident.Name, "__atel_") {
+							funcType.Params.List = removeField(funcType.Params.List, argIndex)
+							argIndex--
+							instrgenCode = true
+						}
+					}
+				}
+			}
+		}
+		return true
+	})
+	return instrgenCode
 }
 
 // OtelPruner.
@@ -127,57 +197,7 @@ func (pruner OtelPruner) ReplaceSource(pkg string, filePath string) bool {
 
 // Rewrite.
 func (OtelPruner) Rewrite(pkg string, file *ast.File, fset *token.FileSet, trace *os.File) {
-	ast.Inspect(file, func(n ast.Node) bool {
-		switch x := n.(type) {
-		case *ast.FuncDecl:
-			if x.Body != nil {
-				inspectFuncContent(x.Type, x.Body)
-			}
-		case *ast.CallExpr:
-			for argIndex := 0; argIndex < len(x.Args); argIndex++ {
-				if ident, ok := x.Args[argIndex].(*ast.Ident); ok {
-					if strings.Contains(ident.Name, "__atel_") {
-						x.Args = removeExpr(x.Args, argIndex)
-						argIndex--
-					}
-				}
-			}
-			for argIndex := 0; argIndex < len(x.Args); argIndex++ {
-				if c, ok := x.Args[argIndex].(*ast.CallExpr); ok {
-					if sel, ok := c.Fun.(*ast.SelectorExpr); ok {
-						if ident, ok := sel.X.(*ast.Ident); ok {
-							if strings.Contains(ident.Name, "__atel_") {
-								x.Args = removeExpr(x.Args, argIndex)
-								argIndex--
-							}
-						}
-					}
-				}
-			}
-		case *ast.FuncLit:
-			inspectFuncContent(x.Type, x.Body)
-		case *ast.TypeSpec:
-			iface, ok := x.Type.(*ast.InterfaceType)
-			if !ok {
-				return true
-			}
-			for _, method := range iface.Methods.List {
-				funcType, ok := method.Type.(*ast.FuncType)
-				if !ok {
-					continue
-				}
-				for argIndex := 0; argIndex < len(funcType.Params.List); argIndex++ {
-					for _, ident := range funcType.Params.List[argIndex].Names {
-						if strings.Contains(ident.Name, "__atel_") {
-							funcType.Params.List = removeField(funcType.Params.List, argIndex)
-							argIndex--
-						}
-					}
-				}
-			}
-		}
-		return true
-	})
+	Inspect(file)
 	astutil.DeleteNamedImport(fset, file, "__atel_context", "context")
 	astutil.DeleteNamedImport(fset, file, "__atel_otel", "go.opentelemetry.io/otel")
 	astutil.DeleteNamedImport(fset, file, "__atel_runtime", "runtime")
