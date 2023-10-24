@@ -17,6 +17,7 @@ package rewriters // import "go.opentelemetry.io/contrib/instrgen/rewriters"
 import (
 	"go/ast"
 	"go/token"
+	"golang.org/x/tools/go/ast/astutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -165,6 +166,36 @@ func injectZeroLogTracingCtx(call *ast.CallExpr) {
 }
 
 func injectZapTracingCtx(call *ast.CallExpr) {
+	var stack []*ast.CallExpr
+	stack = append(stack, call)
+	for {
+		n := len(stack) - 1 // Top element
+		if sel, ok := stack[n].Fun.(*ast.SelectorExpr); ok {
+			if callE, ok := sel.X.(*ast.CallExpr); ok {
+				stack = append(stack, callE)
+			} else {
+				break
+			}
+		} else {
+			break
+		}
+	}
+	// do not inject into zap.Error
+	if val, ok := stack[len(stack)-1].Fun.(*ast.SelectorExpr); ok {
+		if val.Sel.Name == "Error" {
+			if val, ok := val.X.(*ast.Ident); ok {
+				if val.Name == "zap" {
+					return
+				}
+			}
+		}
+	}
+	if last, ok := stack[0].Fun.(*ast.SelectorExpr); ok {
+		if last.Sel.Name != "Info" && last.Sel.Name != "Warn" &&
+			last.Sel.Name != "Error" {
+			return
+		}
+	}
 	ctxcalls := []ast.Expr{
 		&ast.CallExpr{
 			Fun: &ast.SelectorExpr{
@@ -418,6 +449,8 @@ func (b LogCtxEnricher) Rewrite(pkg string, file *ast.File, fset *token.FileSet,
 				}
 				if val == "zap" {
 					injectZapTracingCtx(node)
+					astutil.AddImport(fset, file, "go.uber.org/zap")
+
 				}
 				if val == "logrus" {
 					injectLogrusTracingCtx(node, logrusPkg)

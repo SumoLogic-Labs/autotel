@@ -362,9 +362,9 @@ func makeRewriters(instrgenCfg InstrgenCmd, remappedFilePaths map[string]string)
 	case "inject":
 		rewriterS = append(rewriterS, rewriters.RuntimeRewriter{
 			FilePattern: instrgenCfg.FilePattern})
-		//rewriterS = append(rewriterS, rewriters.LogCtxEnricher{
-		//	FilePattern: instrgenCfg.FilePattern, Replace: instrgenCfg.Replace,
-		//	Pkg: instrgenCfg.EntryPoint.Pkg, Fun: instrgenCfg.EntryPoint.FunName, LogCalls: logcalls, RemappedFilePaths: remappedFilePaths})
+		rewriterS = append(rewriterS, rewriters.LogCtxEnricher{
+			FilePattern: instrgenCfg.FilePattern, Replace: instrgenCfg.Replace,
+			Pkg: instrgenCfg.EntryPoint.Pkg, Fun: instrgenCfg.EntryPoint.FunName, LogCalls: logcalls, RemappedFilePaths: remappedFilePaths})
 		rewriterS = append(rewriterS, rewriters.BasicRewriter{
 			FilePattern: instrgenCfg.FilePattern, Replace: instrgenCfg.Replace,
 			Pkg: instrgenCfg.EntryPoint.Pkg, Fun: instrgenCfg.EntryPoint.FunName, RemappedFilePaths: remappedFilePaths})
@@ -462,6 +462,7 @@ import (
 	_ "runtime"
 	_ "go.opentelemetry.io/otel/trace"
 	_ "go.opentelemetry.io/otel/sdk/trace"
+	_ "go.uber.org/zap"
 )
 `
 				_, err = f.WriteString(imports)
